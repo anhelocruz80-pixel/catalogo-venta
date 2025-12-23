@@ -135,41 +135,28 @@ function agregarAlCarrito(id) {
 function renderCarrito() {
   const cont = document.getElementById("carrito-items");
   const totalEl = document.getElementById("carrito-total");
+  const contadorEl = document.getElementById("carrito-contador");
   cont.innerHTML = "";
   let total = 0;
+  let cantidadTotal = 0;
 
   if (carrito.size === 0) {
     cont.innerHTML = `<div class="carrito-vacio">Tu carrito está vacío</div>`;
   } else {
     carrito.forEach(({ producto, cantidad }) => {
-      const linea = document.createElement("div");
-      linea.className = "carrito-linea";
-      linea.innerHTML = `
-        <span class="carrito-nombre">${producto.nombre}</span>
-        <span class="carrito-cantidad">x${cantidad}</span>
-        <span class="carrito-subtotal">${formatoCLP(producto.precio * cantidad)}</span>
-        <button class="carrito-menos" data-id="${producto.id}">−</button>
-        <button class="carrito-mas" data-id="${producto.id}">+</button>
-        <button class="carrito-quitar" data-id="${producto.id}">✕</button>
-      `;
-      cont.appendChild(linea);
+      cont.innerHTML += `
+        <div class="carrito-linea">
+          ${producto.nombre} x${cantidad} - ${formatoCLP(producto.precio * cantidad)}
+        </div>`;
       total += producto.precio * cantidad;
-    });
-
-    // Eventos de línea
-    cont.querySelectorAll(".carrito-menos").forEach(b => {
-      b.addEventListener("click", () => disminuirCantidad(Number(b.dataset.id)));
-    });
-    cont.querySelectorAll(".carrito-mas").forEach(b => {
-      b.addEventListener("click", () => aumentarCantidad(Number(b.dataset.id)));
-    });
-    cont.querySelectorAll(".carrito-quitar").forEach(b => {
-      b.addEventListener("click", () => quitarDelCarrito(Number(b.dataset.id)));
+      cantidadTotal += cantidad;
     });
   }
 
   totalEl.textContent = `Total: ${formatoCLP(total)}`;
+  contadorEl.textContent = cantidadTotal;
 }
+
 
 function disminuirCantidad(id) {
   const entry = carrito.get(id);
