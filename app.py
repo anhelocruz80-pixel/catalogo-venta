@@ -13,6 +13,12 @@ COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código integ
 API_KEY = os.environ.get("API_KEY", "123456789")            # clave dummy
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")
 
+# 👇 imprime las variables al iniciar el backend print("=== Variables de entorno cargadas ===") 
+print("COMMERCE_CODE:", COMMERCE_CODE) 
+print("API_KEY:", API_KEY) 
+print("BASE_URL:", BASE_URL) 
+print("=====================================")
+
 @app.route("/")
 def home():
     return "Backend Flask funcionando en Render 🚀"
