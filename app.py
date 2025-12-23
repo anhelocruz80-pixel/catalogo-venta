@@ -1,15 +1,17 @@
 import os
 from flask import Flask, request, jsonify
 import requests
-from flask_cors import CORS   # 👈 Importa CORS
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # 👈 Habilita CORS para todas las rutas
 
-# 🔑 Variables de entorno (Render → Settings → Environment Variables)
-COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código de integración
-API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")            # clave dummy en pruebas
-BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")  # integración
+# 👇 habilita CORS para tu dominio de GitHub Pages
+CORS(app, resources={r"/*": {"origins": "https://anhelocruz80-pixel.github.io"}})
+
+# 🔑 Variables de entorno en Render
+COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")
+API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")
+BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")
 
 @app.route("/")
 def home():
@@ -18,7 +20,7 @@ def home():
 @app.route("/create-transaction", methods=["POST"])
 def create_transaction():
     data = request.json
-    amount = data.get("amount", 1000)  # monto en CLP
+    amount = data.get("amount", 1000)
     session_id = "sesion123"
     buy_order = "orden123"
 
@@ -27,7 +29,6 @@ def create_transaction():
         "session_id": session_id,
         "amount": amount,
         "return_url": "https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
-        # ⚠️ Cambia esta URL al dominio real de tu frontend en GitHub Pages
     }
 
     headers = {
