@@ -1,15 +1,14 @@
 import os
 from flask import Flask, request, jsonify
 import requests
-from flask_cors import CORS   # 👈 importa CORS
+from flask_cors import CORS   # 👈 Importa CORS
 
 app = Flask(__name__)
-CORS(app)  # 👈 habilita CORS para todas las rutas
+CORS(app)  # 👈 Habilita CORS para todas las rutas
 
-
-# 🔑 Variables de entorno (se definen en Render → Settings → Environment Variables)
+# 🔑 Variables de entorno (Render → Settings → Environment Variables)
 COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código de integración
-API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")            # clave de integración
+API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")            # clave dummy en pruebas
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")  # integración
 
 @app.route("/")
