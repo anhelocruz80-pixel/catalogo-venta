@@ -10,7 +10,7 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anh
 
 # 🔑 Variables de entorno en Render
 COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código integración
-API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")            # clave dummy
+API_KEY = os.environ.get("API_KEY", "123456789")            # clave dummy
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")
 
 @app.route("/")
