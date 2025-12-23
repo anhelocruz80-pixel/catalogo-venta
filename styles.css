@@ -96,3 +96,21 @@ footer { background:#f4f4f4; text-align:center; padding:15px; margin-top:20px; }
   #menu-mobile { display:block; }
   #carrito { position:static; }
 }
+
+/* Botón de pago Webpay */
+#btn-pagar {
+  background: #ff6600; /* color naranja característico */
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+  margin-top: 10px;
+  transition: background 0.3s ease;
+}
+
+#btn-pagar:hover {
+  background: #e65c00; /* tono más oscuro al pasar el mouse */
+}

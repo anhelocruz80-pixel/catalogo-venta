@@ -184,3 +184,35 @@ document.addEventListener("DOMContentLoaded", ()=>{
   cargarCarrito();
   renderCatalogo();
 });
+
+async function pagarCarrito() {
+  // Calcula el total del carrito
+  let total = 0;
+  carrito.forEach(({producto, cantidad}) => {
+    total += producto.precio * cantidad;
+  });
+
+  // Llama al backend Flask
+  const res = await fetch("/create-transaction", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({amount: total})
+  });
+  const data = await res.json();
+
+  if (data.url && data.token) {
+    // Redirige al formulario de pago de Webpay
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = data.url;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "token_ws";
+    input.value = data.token;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+  } else {
+    alert("Error iniciando pago");
+  }
+}
