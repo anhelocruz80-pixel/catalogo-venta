@@ -193,7 +193,7 @@ async function pagarCarrito() {
   });
 
   // Llama al backend Flask
-  const res = await fetch("/create-transaction", {
+  const res = await fetch("https://catalogo-venta.onrender.com/create-transaction", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({amount: total})
