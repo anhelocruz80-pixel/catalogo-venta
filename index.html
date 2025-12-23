@@ -8,6 +8,8 @@
 <body>
   <header>
     <h1>Catálogo de Productos Usados</h1>
+
+    <!-- Menú de categorías -->
     <nav id="menu-categorias">
       <button onclick="filtrar('todos')">Todos</button>
       <button onclick="filtrar('electronica')">Electrónica</button>
@@ -15,6 +17,8 @@
       <button onclick="filtrar('hogar')">Hogar</button>
       <button onclick="filtrar('accesorios')">Accesorios</button>
     </nav>
+
+    <!-- Menú móvil -->
     <select id="menu-mobile" onchange="filtrar(this.value)">
       <option value="todos">Todos</option>
       <option value="electronica">Electrónica</option>
@@ -22,49 +26,34 @@
       <option value="hogar">Hogar</option>
       <option value="accesorios">Accesorios</option>
     </select>
-    <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="buscarProducto()">
+
+    <!-- Buscador y ordenamiento -->
+    <div class="busqueda">
+      <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="buscarProducto()">
+      <select id="ordenar" onchange="ordenarPorPrecio(this.value)">
+        <option value="asc">Precio ↑</option>
+        <option value="desc">Precio ↓</option>
+      </select>
+    </div>
   </header>
 
   <main>
-    <section class="catalogo">
-      <div class="producto" data-categoria="electronica">
-        <img src="img/notebook.png" alt="Notebook usado">
-        <h2>Notebook Usado</h2>
-        <p class="precio">$120.000</p>
-        <p>Notebook funcional con 4GB RAM y buen estado.</p>
-      </div>
-
-      <div class="producto" data-categoria="vestuario">
-        <img src="img/zapatos.png" alt="Zapatos de cuero">
-        <h2>Zapatos de Cuero</h2>
-        <p class="precio">$25.000</p>
-        <p>Zapatos de cuero en excelente estado, poco uso.</p>
-      </div>
-
-      <div class="producto" data-categoria="hogar">
-        <img src="img/mesa.png" alt="Mesa de madera">
-        <h2>Mesa de Madera</h2>
-        <p class="precio">$50.000</p>
-        <p>Mesa robusta hecha de pino, buena condición.</p>
-      </div>
-
-      <div class="producto" data-categoria="accesorios">
-        <img src="img/reloj.png" alt="Reloj de pared">
-        <h2>Reloj de Pared</h2>
-        <p class="precio">$10.000</p>
-        <p>Reloj de pared en buen estado.</p>
-      </div>
-
-      <div class="producto" data-categoria="hogar">
-        <img src="img/silla.png" alt="Silla de madera">
-        <h2>Silla de Madera</h2>
-        <p class="precio">$20.000</p>
-        <p>Silla artesanal con acabado natural, buen estado.</p>
-      </div>
+    <!-- Catálogo dinámico -->
+    <section class="catalogo" id="catalogo">
+      <!-- Los productos se renderizan desde script.js -->
     </section>
 
+    <!-- Paginación -->
     <div id="paginacion"></div>
     <div id="info-pagina"></div>
+
+    <!-- Carrito -->
+    <aside id="carrito">
+      <h2>🛒 Carrito</h2>
+      <div id="carrito-items"></div>
+      <div id="carrito-total"></div>
+      <button id="btn-vaciar">Vaciar carrito</button>
+    </aside>
   </main>
 
   <footer>
