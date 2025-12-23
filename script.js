@@ -186,33 +186,57 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 
 async function pagarCarrito() {
-  // Calcula el total del carrito
-  let total = 0;
-  carrito.forEach(({producto, cantidad}) => {
-    total += producto.precio * cantidad;
-  });
+  try {
+    // Calcula el total del carrito
+    let total = 0;
+    carrito.forEach(({producto, cantidad}) => {
+      total += producto.precio * cantidad;
+    });
 
-  // Llama al backend Flask
-  const res = await fetch("https://catalogo-venta.onrender.com/create-transaction", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({amount: total})
-  });
-  const data = await res.json();
+    if (total <= 0) {
+      alert("Tu carrito está vacío, agrega productos antes de pagar.");
+      return;
+    }
 
-  if (data.url && data.token) {
-    // Redirige al formulario de pago de Webpay
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = data.url;
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = "token_ws";
-    input.value = data.token;
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
-  } else {
-    alert("Error iniciando pago");
+    console.log("Monto total a pagar:", total);
+
+    // Llama al backend Flask en Render
+    const res = await fetch("https://catalogo-venta.onrender.com/create-transaction", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({amount: total})
+    });
+
+    if (!res.ok) {
+      throw new Error("Error en la petición al backend: " + res.status);
+    }
+
+    const data = await res.json();
+    console.log("Respuesta del backend:", data);
+
+    // Verifica si la respuesta tiene token y url
+    if (data.token && data.url) {
+      console.log("Token recibido:", data.token);
+      console.log("URL de Webpay:", data.url);
+
+      // Redirige al formulario de pago de Webpay
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = data.url;
+
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "token_ws";
+      input.value = data.token;
+
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } else {
+      alert("Error iniciando pago. Revisa la consola para más detalles.");
+    }
+  } catch (error) {
+    console.error("Error en pagarCarrito:", error);
+    alert("No se pudo iniciar el pago. Verifica la conexión con el backend.");
   }
 }

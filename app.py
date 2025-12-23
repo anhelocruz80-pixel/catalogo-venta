@@ -5,20 +5,24 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
-# 👇 habilita CORS para tu dominio de GitHub Pages
+# 👇 habilita CORS solo para tu frontend en GitHub Pages
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
 
 # 🔑 Variables de entorno en Render
-COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")
-API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")
+COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código integración
+API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")            # clave dummy
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")
 
 @app.route("/")
 def home():
     return "Backend Flask funcionando en Render 🚀"
 
-@app.route("/create-transaction", methods=["POST"])
+@app.route("/create-transaction", methods=["POST", "OPTIONS"])
 def create_transaction():
+    if request.method == "OPTIONS":
+        # Respuesta al preflight de CORS
+        return jsonify({"status": "ok"}), 200
+
     data = request.json
     amount = data.get("amount", 1000)
     session_id = "sesion123"
@@ -60,6 +64,7 @@ def commit_transaction():
     return jsonify(resp.json())
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Render asigna el puerto
+    # 👇 Render asigna el puerto dinámicamente
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
 
