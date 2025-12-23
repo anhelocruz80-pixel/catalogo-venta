@@ -1,8 +1,11 @@
 import os
 from flask import Flask, request, jsonify
 import requests
+from flask_cors import CORS   # 👈 importa CORS
 
 app = Flask(__name__)
+CORS(app)  # 👈 habilita CORS para todas las rutas
+
 
 # 🔑 Variables de entorno (se definen en Render → Settings → Environment Variables)
 COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código de integración
