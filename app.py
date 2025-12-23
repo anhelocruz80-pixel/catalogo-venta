@@ -5,9 +5,13 @@ import requests
 app = Flask(__name__)
 
 # 🔑 Variables de entorno (se definen en Render → Settings → Environment Variables)
-COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # valor por defecto: integración
-API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")
+COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código de integración
+API_KEY = os.environ.get("API_KEY", "YourApiKeyHere")            # clave de integración
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")  # integración
+
+@app.route("/")
+def home():
+    return "Backend Flask funcionando en Render 🚀"
 
 @app.route("/create-transaction", methods=["POST"])
 def create_transaction():
@@ -20,8 +24,8 @@ def create_transaction():
         "buy_order": buy_order,
         "session_id": session_id,
         "amount": amount,
-        "return_url": "https://tu-frontend.github.io/catalogo-venta/commit"  
-        # ⚠️ Cambia esta URL al dominio real de tu frontend
+        "return_url": "https://TU-FRONTEND.github.io/catalogo-venta/commit"
+        # ⚠️ Cambia esta URL al dominio real de tu frontend en GitHub Pages
     }
 
     headers = {
@@ -53,5 +57,4 @@ def commit_transaction():
     return jsonify(resp.json())
 
 if __name__ == "__main__":
-    # Render usa gunicorn en producción, pero para pruebas locales puedes usar flask run
     app.run(port=5000, debug=True)
