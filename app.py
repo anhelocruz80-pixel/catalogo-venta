@@ -6,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 
 # 👇 habilita CORS para tu dominio de GitHub Pages
-CORS(app, resources={r"/*": {"origins": "https://anhelocruz80-pixel.github.io"}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
 
 # 🔑 Variables de entorno en Render
 COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")
