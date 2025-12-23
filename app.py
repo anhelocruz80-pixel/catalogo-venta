@@ -24,7 +24,7 @@ def create_transaction():
         "buy_order": buy_order,
         "session_id": session_id,
         "amount": amount,
-        "return_url": "https://TU-FRONTEND.github.io/catalogo-venta/commit"
+        "return_url": "https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
         # ⚠️ Cambia esta URL al dominio real de tu frontend en GitHub Pages
     }
 
