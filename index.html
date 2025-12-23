@@ -8,9 +8,6 @@
 <body>
   <header>
     <h1>Catálogo de Productos Usados</h1>
-	
-	<!-- mostrar el número de productos en el carrito -->
-	<div id="carrito-header"> 🛒 Carrito (<span id="carrito-contador">0</span>) </div>
 
     <!-- Menú de categorías -->
     <nav id="menu-categorias">
@@ -41,18 +38,16 @@
   </header>
 
   <main>
-    <!-- Catálogo dinámico -->
-    <section class="catalogo" id="catalogo">
-      <!-- Los productos se renderizan desde script.js -->
+    <!-- Contenedor catálogo + paginación -->
+    <section class="catalogo-container">
+      <section class="catalogo" id="catalogo"></section>
+      <div id="paginacion"></div>
+      <div id="info-pagina"></div>
     </section>
-
-    <!-- Paginación -->
-    <div id="paginacion"></div>
-    <div id="info-pagina"></div>
 
     <!-- Carrito -->
     <aside id="carrito">
-      <h2>🛒 Carrito</h2>
+      <h2>🛒 Carrito (<span id="carrito-contador">0</span>)</h2>
       <div id="carrito-items"></div>
       <div id="carrito-total"></div>
       <button id="btn-vaciar">Vaciar carrito</button>
