@@ -1,0 +1,181 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: #4a2c2a;
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+nav button {
+  margin: 5px;
+  padding: 10px 15px;
+  border: none;
+  background: #6b3f3b;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+nav button:hover {
+  background: #8c5a55;
+}
+
+#buscador {
+  margin: 15px;
+  padding: 10px;
+  width: 60%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.catalogo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 20px;
+}
+
+.producto {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin: 15px;
+  padding: 15px;
+  width: 250px;
+  text-align: center;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+}
+
+.producto img {
+  max-width: 100%;
+  border-radius: 5px;
+}
+
+.precio {
+  color: green;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+footer {
+  background: #f4f4f4;
+  text-align: center;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+.contacto, .correo {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 15px;
+  background: #25D366;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.contacto:hover {
+  background: #128C7E;
+}
+
+.correo {
+  background: #0072c6;
+}
+
+.correo:hover {
+  background: #005a9e;
+}
+
+#paginacion {
+  text-align: center;
+  margin: 20px;
+}
+
+#paginacion button {
+  margin: 0 5px;
+  padding: 8px 12px;
+  border: none;
+  background: #6b3f3b;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#paginacion button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .catalogo {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .producto {
+    width: 90%;
+  }
+
+  #buscador {
+    width: 90%;
+  }
+}
+
+/* Menú desplegable oculto en escritorio */
+#menu-mobile {
+  display: none;
+  margin: 10px auto;
+  padding: 10px;
+  width: 80%;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+/* Responsive: ocultar botones y mostrar select */
+@media (max-width: 768px) {
+  #menu-categorias {
+    display: none;
+  }
+  #menu-mobile {
+    display: block;
+  }
+}
+
+.oculto {
+  display: none !important;
+}
+
+#paginacion {
+  text-align: center;
+  margin: 20px;
+}
+
+#paginacion button {
+  margin: 0 5px;
+  padding: 8px 12px;
+  border: none;
+  background: #6b3f3b;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#paginacion button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+#info-pagina {
+  text-align: center;
+  margin: 10px;
+  font-weight: bold;
+  color: #333;
+}
+
+

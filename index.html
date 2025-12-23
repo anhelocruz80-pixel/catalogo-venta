@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Catálogo de Usados</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Catálogo de Productos Usados</h1>
+    <nav id="menu-categorias">
+      <button onclick="filtrar('todos')">Todos</button>
+      <button onclick="filtrar('electronica')">Electrónica</button>
+      <button onclick="filtrar('vestuario')">Vestuario</button>
+      <button onclick="filtrar('hogar')">Hogar</button>
+      <button onclick="filtrar('accesorios')">Accesorios</button>
+    </nav>
+    <select id="menu-mobile" onchange="filtrar(this.value)">
+      <option value="todos">Todos</option>
+      <option value="electronica">Electrónica</option>
+      <option value="vestuario">Vestuario</option>
+      <option value="hogar">Hogar</option>
+      <option value="accesorios">Accesorios</option>
+    </select>
+    <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="buscarProducto()">
+  </header>
+
+  <main>
+    <section class="catalogo">
+      <div class="producto" data-categoria="electronica">
+        <img src="img/notebook.png" alt="Notebook usado">
+        <h2>Notebook Usado</h2>
+        <p class="precio">$120.000</p>
+        <p>Notebook funcional con 4GB RAM y buen estado.</p>
+      </div>
+
+      <div class="producto" data-categoria="vestuario">
+        <img src="img/zapatos.png" alt="Zapatos de cuero">
+        <h2>Zapatos de Cuero</h2>
+        <p class="precio">$25.000</p>
+        <p>Zapatos de cuero en excelente estado, poco uso.</p>
+      </div>
+
+      <div class="producto" data-categoria="hogar">
+        <img src="img/mesa.png" alt="Mesa de madera">
+        <h2>Mesa de Madera</h2>
+        <p class="precio">$50.000</p>
+        <p>Mesa robusta hecha de pino, buena condición.</p>
+      </div>
+
+      <div class="producto" data-categoria="accesorios">
+        <img src="img/reloj.png" alt="Reloj de pared">
+        <h2>Reloj de Pared</h2>
+        <p class="precio">$10.000</p>
+        <p>Reloj de pared en buen estado.</p>
+      </div>
+
+      <div class="producto" data-categoria="hogar">
+        <img src="img/silla.png" alt="Silla de madera">
+        <h2>Silla de Madera</h2>
+        <p class="precio">$20.000</p>
+        <p>Silla artesanal con acabado natural, buen estado.</p>
+      </div>
+    </section>
+
+    <div id="paginacion"></div>
+    <div id="info-pagina"></div>
+  </main>
+
+  <footer>
+    <p>© 2025 Catálogo de Usados</p>
+    <a href="https://wa.me/56997243482?text=Hola,%20quiero%20más%20información%20sobre%20sus%20productos" class="contacto">
+      📲 Contáctanos por WhatsApp
+    </a>
+    <br>
+    <a href="mailto:anhelocruz80@gmail.com" class="correo">✉️ Escríbenos a anhelocruz80@gmail.com</a>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
