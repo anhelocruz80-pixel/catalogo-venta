@@ -126,16 +126,12 @@ function renderCarrito() {
   } else {
     carrito.forEach(({producto,cantidad})=>{
       cont.innerHTML += `
-        <div class="carrito-linea">
-			<span class="nombre-producto">${producto.nombre} x${cantidad}</span>
-			<span class="precio-producto">${formatoCLP(producto.precio*cantidad)}</span>
-			<button class="btn-eliminar" onclick="quitarDelCarrito(${producto.id})" aria-label="Eliminar producto">
-			  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M5.5 5.5A.5.5 0 0 1 6 5h4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0V6H6v6.5a.5.5 0 0 1-1 0v-7z"/>
-                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1 0-2h3.1a1 1 0 0 1 .9-.6h2a1 1 0 0 1 .9.6h3.1a1 1 0 0 1 1 1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118z"/>
-              </svg>
-             </button>
-		</div>`;
+		<div class="carrito-linea"> 
+			<span class="nombre-producto">${producto.nombre} x${cantidad}</span> 
+			<span class="precio-producto">${formatoCLP(producto.precio*cantidad)}</span> 
+			<button class="btn-eliminar" onclick="quitarDelCarrito(${producto.id})" aria-label="Eliminar producto">✕</button> 
+		</div>
+		`;
       total += producto.precio*cantidad;
       cantidadTotal += cantidad;
     });
