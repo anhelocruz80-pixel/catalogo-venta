@@ -49,7 +49,8 @@ def create_transaction():
     }
     
     print("=== Headers enviados a Transbank ===") 
-    print(headers) print("=== Payload enviado ===") 
+    print(headers) 
+    print("=== Payload enviado ===") 
     print(payload)
 
     resp = requests.post(
