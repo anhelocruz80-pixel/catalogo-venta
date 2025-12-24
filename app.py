@@ -11,12 +11,13 @@ from transbank.common.integration_type import IntegrationType
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
 
-# Crear instancia de Transaction con credenciales de integración
-tx = Transaction(
-    commerce_code=IntegrationCommerceCodes.WEBPAY_PLUS,
-    api_key=IntegrationApiKeys.WEBPAY,
-    integration_type=IntegrationType.TEST  # Cambia a LIVE en producción
-)
+# Crear instancia de Transaction SIN argumentos
+tx = Transaction()
+
+# Configurar credenciales directamente en la instancia
+tx.commerce_code = IntegrationCommerceCodes.WEBPAY_PLUS
+tx.api_key = IntegrationApiKeys.WEBPAY
+tx.integration_type = IntegrationType.TEST  # Cambia a LIVE en producción
 
 @app.route("/")
 def home():
