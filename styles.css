@@ -114,3 +114,39 @@ footer { background:#f4f4f4; text-align:center; padding:15px; margin-top:20px; }
 #btn-pagar:hover {
   background: #e65c00; /* tono más oscuro al pasar el mouse */
 }
+
+button {
+  margin-top: 20px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  color: white;
+  transition: background 0.3s ease;
+}
+
+/* Éxito */
+button.success {
+  background: #4CAF50;
+}
+button.success:hover {
+  background: #45a049;
+}
+
+/* Rechazo */
+button.error {
+  background: #f44336;
+}
+button.error:hover {
+  background: #d32f2f;
+}
+
+/* Error genérico */
+button.warning {
+  background: #9e9e9e;
+}
+button.warning:hover {
+  background: #757575;
+}
+

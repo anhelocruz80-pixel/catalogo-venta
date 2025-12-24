@@ -267,17 +267,29 @@ async function procesarCommit() {
         <p>Orden: ${data.buy_order}</p>
         <p>Monto: $${data.amount}</p>
         <p>Fecha: ${data.transaction_date}</p>
+		<button class="success" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+		  🔙 Volver a la tienda
+		</button>
       `;
     } else {
       cont.innerHTML = `
         <h2>❌ Pago rechazado</h2>
         <p>Estado: ${data.status}</p>
         <p>Detalle: ${JSON.stringify(data)}</p>
+		<button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+		  🔙 Volver a la tienda
+		</button>
       `;
     }
   } catch (error) {
     console.error("Error al procesar commit:", error);
     const cont = document.getElementById("resultado-pago");
-    cont.innerHTML = `<h2>⚠️ Error al confirmar el pago</h2><p>Revisa la consola para más detalles.</p>`;
+    cont.innerHTML = `
+	<h2>⚠️ Error al confirmar el pago</h2>
+	<p>Revisa la consola para más detalles.</p>
+	<button class="warning" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+      🔙 Volver a la tienda
+    </button>
+	`;
   }
 }
