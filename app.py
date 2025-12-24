@@ -11,10 +11,12 @@ from transbank.common.integration_type import IntegrationType
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
 
-# Configuración global de credenciales de integración
-Transaction.commerce_code = IntegrationCommerceCodes.WEBPAY_PLUS
-Transaction.api_key = IntegrationApiKeys.WEBPAY
-Transaction.integration_type = IntegrationType.TEST  # Cambia a LIVE en producción
+# Crear instancia de Transaction con credenciales de integración
+tx = Transaction(
+    commerce_code=IntegrationCommerceCodes.WEBPAY_PLUS,
+    api_key=IntegrationApiKeys.WEBPAY,
+    integration_type=IntegrationType.TEST  # Cambia a LIVE en producción
+)
 
 @app.route("/")
 def home():
@@ -30,8 +32,8 @@ def create_transaction():
     session_id = "sesion123"
     buy_order = "orden123"
 
-    # Crear transacción con los parámetros básicos
-    response = Transaction.create(
+    # Usar la instancia tx para crear la transacción
+    response = tx.create(
         buy_order=buy_order,
         session_id=session_id,
         amount=amount,
@@ -46,7 +48,7 @@ def create_transaction():
 @app.route("/commit", methods=["POST", "GET"])
 def commit_transaction():
     token = request.args.get("token_ws")
-    response = Transaction.commit(token)
+    response = tx.commit(token)
     return jsonify(response)
 
 if __name__ == "__main__":
