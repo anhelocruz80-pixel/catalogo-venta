@@ -2,15 +2,12 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transbank.webpay.webpay_plus.transaction import Transaction
-from transbank.common.options import IntegrationOptions
 
 app = Flask(__name__)
-
-# 👇 habilita CORS solo para tu frontend en GitHub Pages
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
 
-# 🔑 Variables de entorno en Render
-COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código integración
+# Variables de entorno
+COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")
 API_KEY = os.environ.get("API_KEY", "579B532A744DBA1A0C0D33A7C75A1F08F6B0C0C0D33A7C75A1F08F6B0C0C0D33")
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")
 
@@ -19,10 +16,6 @@ print("COMMERCE_CODE:", COMMERCE_CODE)
 print("API_KEY:", API_KEY)
 print("BASE_URL:", BASE_URL)
 print("=====================================")
-
-@app.route("/")
-def home():
-    return "Backend Flask funcionando en Render 🚀"
 
 @app.route("/create-transaction", methods=["POST", "OPTIONS"])
 def create_transaction():
@@ -34,14 +27,8 @@ def create_transaction():
     session_id = "sesion123"
     buy_order = "orden123"
 
-    # Configura la transacción con el SDK
-    tx = Transaction(
-        options=IntegrationOptions(
-            commerce_code=COMMERCE_CODE,
-            api_key=API_KEY,
-            base_url=BASE_URL
-        )
-    )
+    # Usar Transaction directamente
+    tx = Transaction(commerce_code=COMMERCE_CODE, api_key=API_KEY, base_url=BASE_URL)
 
     response = tx.create(
         buy_order=buy_order,
@@ -50,7 +37,6 @@ def create_transaction():
         return_url="https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
     )
 
-    # El SDK devuelve un dict con token y URL
     return jsonify({
         "token": response["token"],
         "url": response["url"]
@@ -59,15 +45,7 @@ def create_transaction():
 @app.route("/commit", methods=["POST", "GET"])
 def commit_transaction():
     token = request.args.get("token_ws")
-
-    tx = Transaction(
-        options=IntegrationOptions(
-            commerce_code=COMMERCE_CODE,
-            api_key=API_KEY,
-            base_url=BASE_URL
-        )
-    )
-
+    tx = Transaction(commerce_code=COMMERCE_CODE, api_key=API_KEY, base_url=BASE_URL)
     response = tx.commit(token)
     return jsonify(response)
 
