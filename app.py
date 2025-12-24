@@ -31,8 +31,7 @@ def create_transaction():
     # Usar Transaction
     options = WebpayOptions(
               commerce_code=COMMERCE_CODE,
-              api_key=API_KEY,
-              base_url=BASE_URL
+              api_key=API_KEY
               )
 
     response = Transaction.create(
@@ -51,10 +50,10 @@ def create_transaction():
 @app.route("/commit", methods=["POST", "GET"])
 def commit_transaction():
     token = request.args.get("token_ws")
+    
     options = WebpayOptions(
     commerce_code=COMMERCE_CODE,
-    api_key=API_KEY,
-    base_url=BASE_URL
+    api_key=API_KEY
     )
 
     response = Transaction.commit(token, options=options)
