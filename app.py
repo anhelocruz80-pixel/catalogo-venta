@@ -42,8 +42,8 @@ def create_transaction():
     }
 
     headers = {
-        "Tbk-Api-Key-Id": COMMERCE_CODE,
-        "Tbk-Api-Key-Secret": API_KEY,
+        "Tbk-Api-Key-Id": 597055555532,
+        "Tbk-Api-Key-Secret": 123456789,
         "Content-Type": "application/json"
     }
 
