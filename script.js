@@ -1,4 +1,4 @@
-Lista de productos de ejemplo
+//Lista de productos de ejemplo
 let productos = [
   {id:1, nombre:"Notebook Usado", precio:120000, categoria:"electronica", imagen:"img/notebook.png", descripcion:"Notebook funcional con 4GB RAM"},
   {id:2, nombre:"Zapatos de Cuero", precio:25000, categoria:"vestuario", imagen:"img/zapatos.png", descripcion:"Zapatos en excelente estado"},
