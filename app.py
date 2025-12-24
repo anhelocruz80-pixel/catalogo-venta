@@ -4,6 +4,7 @@ from flask_cors import CORS
 
 # Importaciones del SDK de Transbank
 from transbank.webpay.webpay_plus.transaction import Transaction
+from transbank.common.options import WebpayOptions
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
 from transbank.common.integration_api_keys import IntegrationApiKeys
 from transbank.common.integration_type import IntegrationType
@@ -11,13 +12,14 @@ from transbank.common.integration_type import IntegrationType
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
 
-# Crear instancia de Transaction SIN argumentos
-tx = Transaction()
+# Crear instancia de Transaction con WebpayOptions
+options = WebpayOptions(
+    commerce_code=IntegrationCommerceCodes.WEBPAY_PLUS,
+    api_key=IntegrationApiKeys.WEBPAY,
+    integration_type=IntegrationType.TEST  # Cambia a LIVE en producción
+)
 
-# Configurar credenciales directamente en la instancia
-tx.commerce_code = IntegrationCommerceCodes.WEBPAY_PLUS
-tx.api_key = IntegrationApiKeys.WEBPAY
-tx.integration_type = IntegrationType.TEST  # Cambia a LIVE en producción
+tx = Transaction(options)
 
 @app.route("/")
 def home():
