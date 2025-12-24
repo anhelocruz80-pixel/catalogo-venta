@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transbank.webpay.webpay_plus.transaction import Transaction
 from transbank.common.options import WebpayOptions
+from transbank.common.integration_type import IntegrationType
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
@@ -31,7 +32,8 @@ def create_transaction():
     # Usar Transaction
     options = WebpayOptions(
               commerce_code=COMMERCE_CODE,
-              api_key=API_KEY
+              api_key=API_KEY,
+              integration_type=IntegrationType.TEST # o IntegrationType.LIVE en producción
               )
 
     response = Transaction.create(
@@ -53,7 +55,8 @@ def commit_transaction():
     
     options = WebpayOptions(
     commerce_code=COMMERCE_CODE,
-    api_key=API_KEY
+    api_key=API_KEY,
+    integration_type=IntegrationType.TEST
     )
 
     response = Transaction.commit(token, options=options)
