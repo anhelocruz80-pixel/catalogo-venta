@@ -59,8 +59,8 @@ def create_transaction():
 def commit_transaction():
     token = request.args.get("token_ws")
     headers = {
-        "Tbk-Api-Key-Id": COMMERCE_CODE,
-        "Tbk-Api-Key-Secret": API_KEY,
+        "Tbk-Api-Key-Id": 597055555532,
+        "Tbk-Api-Key-Secret": 123456789,
         "Content-Type": "application/json"
     }
     resp = requests.put(
