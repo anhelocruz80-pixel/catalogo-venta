@@ -1,4 +1,4 @@
-// Lista de productos de ejemplo
+Lista de productos de ejemplo
 let productos = [
   {id:1, nombre:"Notebook Usado", precio:120000, categoria:"electronica", imagen:"img/notebook.png", descripcion:"Notebook funcional con 4GB RAM"},
   {id:2, nombre:"Zapatos de Cuero", precio:25000, categoria:"vestuario", imagen:"img/zapatos.png", descripcion:"Zapatos en excelente estado"},
@@ -185,7 +185,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
   renderCatalogo();
 });
 
-/* --- Pago --- */
 async function pagarCarrito() {
   try {
     // Calcula el total del carrito
@@ -208,5 +207,36 @@ async function pagarCarrito() {
       body: JSON.stringify({amount: total})
     });
 
+    if (!res.ok) {
+      throw new Error("Error en la petición al backend: " + res.status);
+    }
+
     const data = await res.json();
-    console.log("Respuesta
+    console.log("Respuesta del backend:", data);
+
+    // Verifica si la respuesta tiene token y url
+    if (data.token && data.url) {
+      console.log("Token recibido:", data.token);
+      console.log("URL de Webpay:", data.url);
+
+      // Redirige al formulario de pago de Webpay
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = data.url;
+
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "token_ws";
+      input.value = data.token;
+
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    } else {
+      alert("Error iniciando pago. Revisa la consola para más detalles.");
+    }
+  } catch (error) {
+    console.error("Error en pagarCarrito:", error);
+    alert("No se pudo iniciar el pago. Verifica la conexión con el backend.");
+  }
+}
