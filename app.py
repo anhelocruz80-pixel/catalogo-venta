@@ -10,13 +10,14 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anh
 
 # 🔑 Variables de entorno en Render
 COMMERCE_CODE = os.environ.get("COMMERCE_CODE", "597055555532")  # código integración
-API_KEY = os.environ.get("API_KEY", "123456789")            # clave dummy
+API_KEY = os.environ.get("API_KEY", "123456789")                 # clave dummy
 BASE_URL = os.environ.get("BASE_URL", "https://webpay3gint.transbank.cl")
 
-# 👇 imprime las variables al iniciar el backend print("=== Variables de entorno cargadas ===") 
-print("COMMERCE_CODE:", COMMERCE_CODE) 
-print("API_KEY:", API_KEY) 
-print("BASE_URL:", BASE_URL) 
+# 👇 imprime las variables al iniciar el backend
+print("=== Variables de entorno cargadas ===")
+print("COMMERCE_CODE:", COMMERCE_CODE)
+print("API_KEY:", API_KEY)
+print("BASE_URL:", BASE_URL)
 print("=====================================")
 
 @app.route("/")
@@ -42,8 +43,8 @@ def create_transaction():
     }
 
     headers = {
-        "Tbk-Api-Key-Id": 597055555532,
-        "Tbk-Api-Key-Secret": 123456789,
+        "Tbk-Api-Key-Id": str(COMMERCE_CODE),   # 👈 convertir a string
+        "Tbk-Api-Key-Secret": str(API_KEY),     # 👈 convertir a string
         "Content-Type": "application/json"
     }
 
@@ -53,24 +54,23 @@ def create_transaction():
         headers=headers
     )
 
-    return jsonify(resp.json())
+    return jsonify(resp.json()), resp.status_code
 
 @app.route("/commit", methods=["POST", "GET"])
 def commit_transaction():
     token = request.args.get("token_ws")
     headers = {
-        "Tbk-Api-Key-Id": 597055555532,
-        "Tbk-Api-Key-Secret": 123456789,
+        "Tbk-Api-Key-Id": str(COMMERCE_CODE),   # 👈 convertir a string
+        "Tbk-Api-Key-Secret": str(API_KEY),     # 👈 convertir a string
         "Content-Type": "application/json"
     }
     resp = requests.put(
         f"{BASE_URL}/rswebpaytransaction/api/webpay/v1.2/transactions/{token}",
         headers=headers
     )
-    return jsonify(resp.json())
+    return jsonify(resp.json()), resp.status_code
 
 if __name__ == "__main__":
     # 👇 Render asigna el puerto dinámicamente
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
