@@ -2,6 +2,7 @@ import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transbank.webpay.webpay_plus.transaction import Transaction
+from transbank.common.options import WebpayOptions
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
@@ -27,15 +28,20 @@ def create_transaction():
     session_id = "sesion123"
     buy_order = "orden123"
 
-    # Usar Transaction directamente
-    tx = Transaction(commerce_code=COMMERCE_CODE, api_key=API_KEY, base_url=BASE_URL)
+    # Usar Transaction
+    options = WebpayOptions(
+              commerce_code=COMMERCE_CODE,
+              api_key=API_KEY,
+              base_url=BASE_URL
+              )
 
-    response = tx.create(
-        buy_order=buy_order,
-        session_id=session_id,
-        amount=amount,
-        return_url="https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
-    )
+    response = Transaction.create(
+               buy_order=buy_order,
+               session_id=session_id,
+               amount=amount,
+               return_url="https://anhelocruz80-pixel.github.io/catalogo-venta/commit",
+               options=options
+              )
 
     return jsonify({
         "token": response["token"],
@@ -45,9 +51,15 @@ def create_transaction():
 @app.route("/commit", methods=["POST", "GET"])
 def commit_transaction():
     token = request.args.get("token_ws")
-    tx = Transaction(commerce_code=COMMERCE_CODE, api_key=API_KEY, base_url=BASE_URL)
-    response = tx.commit(token)
+    options = WebpayOptions(
+    commerce_code=COMMERCE_CODE,
+    api_key=API_KEY,
+    base_url=BASE_URL
+    )
+
+    response = Transaction.commit(token, options=options)
     return jsonify(response)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
