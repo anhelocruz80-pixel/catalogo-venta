@@ -275,7 +275,9 @@ async function procesarCommit() {
       cont.innerHTML = `
         <h2>❌ Pago rechazado</h2>
         <p>Estado: ${data.status}</p>
-        <p>Detalle: ${JSON.stringify(data)}</p>
+        <p>Código de respuesta: ${data.response_code}</p>
+		<p>Autorización: ${data.transaction_date}</p>
+		<p>Fecha: ${data.response_code}</p>
 		<button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
 		  🔙 Volver a la tienda
 		</button>
