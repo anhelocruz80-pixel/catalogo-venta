@@ -261,28 +261,34 @@ async function procesarCommit() {
 
     // Muestra el resultado al usuario
     const cont = document.getElementById("resultado-pago");
-    if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
-      cont.innerHTML = `
-        <h2>✅ Pago exitoso</h2>
-        <p>Orden: ${data.buy_order}</p>
-        <p>Monto: $${data.amount}</p>
-        <p>Fecha: ${data.transaction_date}</p>
-		<button class="success" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
-		  🔙 Volver a la tienda
-		</button>
-      `;
-    } else {
-      cont.innerHTML = `
-        <h2>❌ Pago rechazado</h2>
-        <p>Estado: ${data.status}</p>
-        <p>Código de respuesta: ${data.response_code}</p>
-		<p>Autorización: ${data.authorization_code}</p>
-		<p>Fecha: ${data.transaction_date}</p>
-		<button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
-		  🔙 Volver a la tienda
-		</button>
-      `;
-    }
+
+	if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
+	  cont.innerHTML = `
+		<div class="card">
+		  <h2>✅ Pago exitoso</h2>
+		  <p><strong>Orden:</strong> ${data.buy_order}</p>
+		  <p><strong>Monto:</strong> $${data.amount}</p>
+		  <p><strong>Fecha:</strong> ${data.transaction_date}</p>
+		  <button class="success" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+			🔙 Volver a la tienda
+		  </button>
+		</div>
+	  `;
+	} else {
+	  cont.innerHTML = `
+		<div class="card">
+		  <h2>❌ Pago rechazado</h2>
+		  <p><strong>Estado:</strong> ${data.status}</p>
+		  <p><strong>Código de respuesta:</strong> ${data.response_code}</p>
+		  <p><strong>Autorización:</strong> ${data.authorization_code}</p>
+		  <p><strong>Fecha:</strong> ${data.transaction_date}</p>
+		  <button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+			🔙 Volver a la tienda
+		  </button>
+		</div>
+	  `;
+	}
+
   } catch (error) {
     console.error("Error al procesar commit:", error);
     const cont = document.getElementById("resultado-pago");

@@ -115,6 +115,18 @@ footer { background:#f4f4f4; text-align:center; padding:15px; margin-top:20px; }
   background: #e65c00; /* tono más oscuro al pasar el mouse */
 }
 
+/* Tarjeta contenedora */
+.card {
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  text-align: center;
+  max-width: 400px;
+  margin: 20px auto;
+}
+
+/* Botón base */
 button {
   margin-top: 20px;
   padding: 12px 20px;
