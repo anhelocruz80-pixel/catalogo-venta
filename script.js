@@ -207,10 +207,6 @@ async function pagarCarrito() {
       body: JSON.stringify({amount: total})
     });
 
-    if (!res.ok) {
-      throw new Error("Error en la petición al backend: " + res.status);
-    }
-
     const data = await res.json();
     console.log("Respuesta del backend:", data);
 
@@ -238,5 +234,50 @@ async function pagarCarrito() {
   } catch (error) {
     console.error("Error en pagarCarrito:", error);
     alert("No se pudo iniciar el pago. Verifica la conexión con el backend.");
+  }
+}
+
+async function procesarCommit() {
+  try {
+    // Obtiene el token que Webpay envía en la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token_ws");
+
+    if (!token) {
+      console.warn("No se recibió token_ws en la URL");
+      return;
+    }
+
+    console.log("Token recibido en commit:", token);
+
+    // Llama al backend para confirmar la transacción
+    const res = await fetch(`https://catalogo-venta.onrender.com/commit?token_ws=${token}`, {
+      method: "GET",
+      headers: {"Content-Type":"application/json"}
+    });
+
+    const data = await res.json();
+    console.log("Respuesta del commit:", data);
+
+    // Muestra el resultado al usuario
+    const cont = document.getElementById("resultado-pago");
+    if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
+      cont.innerHTML = `
+        <h2>✅ Pago exitoso</h2>
+        <p>Orden: ${data.buy_order}</p>
+        <p>Monto: $${data.amount}</p>
+        <p>Fecha: ${data.transaction_date}</p>
+      `;
+    } else {
+      cont.innerHTML = `
+        <h2>❌ Pago rechazado</h2>
+        <p>Estado: ${data.status}</p>
+        <p>Detalle: ${JSON.stringify(data)}</p>
+      `;
+    }
+  } catch (error) {
+    console.error("Error al procesar commit:", error);
+    const cont = document.getElementById("resultado-pago");
+    cont.innerHTML = `<h2>⚠️ Error al confirmar el pago</h2><p>Revisa la consola para más detalles.</p>`;
   }
 }
