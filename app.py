@@ -47,6 +47,10 @@ def create_transaction():
         "Tbk-Api-Key-Secret": str(API_KEY),     # 👈 convertir a string
         "Content-Type": "application/json"
     }
+    
+    print("=== Headers enviados a Transbank ===") 
+    print(headers) print("=== Payload enviado ===") 
+    print(payload)
 
     resp = requests.post(
         f"{BASE_URL}/rswebpaytransaction/api/webpay/v1.2/transactions",
