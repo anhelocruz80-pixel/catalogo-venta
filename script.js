@@ -250,14 +250,14 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   await cargarProductos();
 });
 
-/* --- Pago con Webpay --- */
+/* --- Pago con Webpay (valida y muestra errores claros) --- */
 async function pagarCarrito() {
   try {
     let total = 0;
     const items = [];
     carrito.forEach(({producto, cantidad}) => {
       total += producto.precio * cantidad;
-      items.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad });
+      items.push({ id: producto.id, cantidad });
     });
 
     if (total <= 0) {
@@ -272,6 +272,13 @@ async function pagarCarrito() {
     });
 
     const data = await res.json();
+
+    // Mensaje claro si backend rechazó por stock u otro motivo
+    if (data.error) {
+      alert("No se pudo iniciar el pago: " + data.error);
+      await cargarProductos(); // sincroniza stock si hubo reserva liberada o rechazo
+      return;
+    }
 
     if (data.token && data.url) {
       const form = document.createElement("form");
@@ -289,6 +296,7 @@ async function pagarCarrito() {
     } else {
       alert("Error iniciando pago. Revisa la consola para más detalles.");
       console.error("Respuesta inesperada:", data);
+      await cargarProductos();
     }
   } catch (error) {
     console.error("Error en pagarCarrito:", error);
@@ -325,7 +333,7 @@ async function procesarCommit() {
     const data = await res.json();
 
     if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
-      // Limpia carrito tras pago exitoso (defensivo)
+      // Limpia carrito tras pago exitoso
       carrito.clear();
       localStorage.removeItem("carrito");
 
@@ -333,14 +341,15 @@ async function procesarCommit() {
         <div class="card">
           <h2>✅ Pago exitoso</h2>
           <p><strong>Orden:</strong> ${data.buy_order}</p>
-          <p><strong>Monto:</strong> $${data.amount}</p>
-          <p><strong>Fecha:</strong> ${data.transaction_date}</p>
+          <p><strong>Monto:</strong> ${formatoCLP(Number(data.amount || 0))}</p>
+          <p><strong>Fecha:</strong> ${data.transaction_date || ''}</p>
           <button class="success" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
             🔙 Volver a la tienda
           </button>
         </div>
       `;
     } else {
+      // Pago rechazado → backend ya devolvió stock (según app.py)
       cont.innerHTML = `
         <div class="card">
           <h2>❌ Pago rechazado</h2>
