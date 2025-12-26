@@ -35,16 +35,17 @@ productos = {
     10: {"id": 10, "nombre": "Bolso Deportivo", "precio": 18000, "categoria": "accesorios", "stock": 5},
 }
 
+# Guardar transacciones con sus items
+transacciones = {}
+
 @app.route("/")
 def home():
     return "Backend funcionando correctamente 🚀"
 
-# Catálogo (opcional para sincronizar stock)
 @app.route("/productos", methods=["GET"])
 def listar_productos():
     return jsonify(list(productos.values()))
 
-# Decrementa stock al agregar (opcional si quieres server-side control por clic)
 @app.route("/agregar-carrito", methods=["POST"])
 def agregar_carrito():
     data = request.json
@@ -60,19 +61,17 @@ def agregar_carrito():
     productos[producto_id]["stock"] -= cantidad
     return jsonify({"message": "Agregado", "producto": productos[producto_id]})
 
-# Devuelve stock al cancelar/vaciar
 @app.route("/devolver-carrito", methods=["POST"])
 def devolver_carrito():
     data = request.json  # items: [{id, cantidad}]
     items = data.get("items", [])
     for it in items:
-      pid = int(it.get("id"))
-      qty = int(it.get("cantidad", 0))
-      if pid in productos:
-          productos[pid]["stock"] += qty
+        pid = int(it.get("id"))
+        qty = int(it.get("cantidad", 0))
+        if pid in productos:
+            productos[pid]["stock"] += qty
     return jsonify({"message": "Stock devuelto"})
 
-# Crear transacción (sumando por items si vienen)
 @app.route("/create-transaction", methods=["POST", "OPTIONS"])
 def create_transaction():
     if request.method == "OPTIONS":
@@ -82,7 +81,7 @@ def create_transaction():
     amount = int(data.get("amount", 1000))
     items = data.get("items", [])
 
-    # Si vienen items, recomputar el total para seguridad básica
+    # Si vienen items, recomputar el total y validar stock
     if items:
         total_calc = 0
         for it in items:
@@ -106,6 +105,9 @@ def create_transaction():
         return_url="https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
     )
 
+    # Guardamos los items asociados a esta transacción
+    transacciones[buy_order] = {"items": items}
+
     return jsonify({
         "token": response["token"],
         "url": response["url"]
@@ -118,6 +120,20 @@ def commit_transaction():
         return jsonify({"status": "ERROR", "message": "Falta token_ws"}), 400
 
     response = tx.commit(token)
+    buy_order = response.get("buy_order")
+    status = response.get("status")
+
+    # Si el pago falla, devolver stock
+    if status not in ["AUTHORIZED", "SUCCESS"]:
+        if buy_order in transacciones:
+            items = transacciones[buy_order]["items"]
+            for it in items:
+                pid = int(it.get("id"))
+                qty = int(it.get("cantidad", 0))
+                if pid in productos:
+                    productos[pid]["stock"] += qty
+            del transacciones[buy_order]
+
     return jsonify(response)
 
 if __name__ == "__main__":
