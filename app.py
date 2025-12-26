@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -35,19 +36,58 @@ productos = {
     10: {"id": 10, "nombre": "Bolso Deportivo", "precio": 18000, "categoria": "accesorios", "stock": 5},
 }
 
-# Guardar transacciones con sus items
+# Reservas de stock
+# - reservas_click: reservas creadas al agregar al carrito (sin buy_order aún)
+# - reservas_tx: reservas asociadas a una transacción (buy_order) en curso
+reservas_click = []  # [{id, cantidad, expira: datetime}]
+reservas_tx = {}     # {buy_order: {"items": [{id, cantidad}], "expira": datetime}}
+
+# Transacciones registradas (para commit y devoluciones por fallo)
 transacciones = {}
+
+# Utilidad: liberar reservas vencidas (click y transacción)
+def liberar_reservas_vencidas():
+    ahora = datetime.now()
+
+    # Liberar reservas de clic vencidas
+    i = 0
+    while i < len(reservas_click):
+        r = reservas_click[i]
+        if r["expira"] < ahora:
+            pid = int(r["id"])
+            qty = int(r["cantidad"])
+            if pid in productos:
+                productos[pid]["stock"] += qty
+            reservas_click.pop(i)
+        else:
+            i += 1
+
+    # Liberar reservas de transacción vencidas (caso: nunca se llamó a commit)
+    expiradas = [bo for bo, r in reservas_tx.items() if r["expira"] < ahora]
+    for bo in expiradas:
+        items = reservas_tx[bo]["items"]
+        for it in items:
+            pid = int(it["id"])
+            qty = int(it["cantidad"])
+            if pid in productos:
+                productos[pid]["stock"] += qty
+        del reservas_tx[bo]
 
 @app.route("/")
 def home():
     return "Backend funcionando correctamente 🚀"
 
+# Catálogo: libera reservas vencidas antes de responder
 @app.route("/productos", methods=["GET"])
 def listar_productos():
+    liberar_reservas_vencidas()
     return jsonify(list(productos.values()))
 
+# Decrementa stock y crea reserva temporal al agregar al carrito
 @app.route("/agregar-carrito", methods=["POST"])
 def agregar_carrito():
+    liberar_reservas_vencidas()
+
     data = request.json
     producto_id = int(data.get("id"))
     cantidad = int(data.get("cantidad", 1))
@@ -58,63 +98,122 @@ def agregar_carrito():
     if productos[producto_id]["stock"] < cantidad:
         return jsonify({"error": "Stock insuficiente", "stock": productos[producto_id]["stock"]}), 400
 
+    # Descuento y reserva con expiración
     productos[producto_id]["stock"] -= cantidad
+    reservas_click.append({
+        "id": producto_id,
+        "cantidad": cantidad,
+        "expira": datetime.now() + timedelta(minutes=10)
+    })
+
     return jsonify({"message": "Agregado", "producto": productos[producto_id]})
 
+# Devuelve stock al cancelar/vaciar (y elimina reservas de clic correspondientes)
 @app.route("/devolver-carrito", methods=["POST"])
 def devolver_carrito():
+    liberar_reservas_vencidas()
+
     data = request.json  # items: [{id, cantidad}]
     items = data.get("items", [])
+
+    # Sumar stock
     for it in items:
         pid = int(it.get("id"))
         qty = int(it.get("cantidad", 0))
         if pid in productos:
             productos[pid]["stock"] += qty
+
+    # Consumir reservas_click equivalentes para evitar doble liberación posterior
+    for it in items:
+        pid = int(it.get("id"))
+        qty = int(it.get("cantidad", 0))
+        j = 0
+        while j < len(reservas_click) and qty > 0:
+            r = reservas_click[j]
+            if int(r["id"]) == pid:
+                if r["cantidad"] <= qty:
+                    qty -= r["cantidad"]
+                    reservas_click.pop(j)
+                else:
+                    r["cantidad"] -= qty
+                    qty = 0
+                    j += 1
+            else:
+                j += 1
+
     return jsonify({"message": "Stock devuelto"})
 
+# Crear transacción: valida stock, consolida reservas y asocia buy_order con expiración
 @app.route("/create-transaction", methods=["POST", "OPTIONS"])
 def create_transaction():
     if request.method == "OPTIONS":
         return jsonify({"status": "ok"}), 200
 
-    data = request.json or {}
-    amount = int(data.get("amount", 1000))
-    items = data.get("items", [])
+    liberar_reservas_vencidas()
 
-    # Si vienen items, recomputar el total y validar stock
-    if items:
-        total_calc = 0
-        for it in items:
-            pid = int(it.get("id"))
-            qty = int(it.get("cantidad", 1))
-            prod = productos.get(pid)
-            if not prod:
-                return jsonify({"error": f"Producto {pid} no existe"}), 400
-            if prod["stock"] < qty:
-                return jsonify({"error": "Stock insuficiente", "producto": prod["nombre"], "stock": prod["stock"]}), 400
-            total_calc += prod["precio"] * qty
-        amount = total_calc
+    data = request.json or {}
+    items = data.get("items", [])
+    amount = 0
+
+    # Validar stock disponible (ya se pudo reservar vía agregar-carrito)
+    for it in items:
+        pid = int(it["id"])
+        qty = int(it["cantidad"])
+        prod = productos.get(pid)
+        if not prod:
+            return jsonify({"error": f"Producto {pid} no existe"}), 400
+        if prod["stock"] < qty:
+            return jsonify({"error": "Stock insuficiente", "producto": prod["nombre"], "stock": prod["stock"]}), 400
+        amount += prod["precio"] * qty
+
+    # Descontar stock por si el flujo vino directo aquí (sin agregar-carrito)
+    # y consolidar reservas: restamos del stock y removemos reservas_click equivalentes
+    for it in items:
+        pid = int(it["id"])
+        qty = int(it["cantidad"])
+        productos[pid]["stock"] -= qty
+
+        # Remover reservas_click equivalentes para evitar doble liberación
+        j = 0
+        rem = qty
+        while j < len(reservas_click) and rem > 0:
+            r = reservas_click[j]
+            if int(r["id"]) == pid:
+                if r["cantidad"] <= rem:
+                    rem -= r["cantidad"]
+                    reservas_click.pop(j)
+                else:
+                    r["cantidad"] -= rem
+                    rem = 0
+                    j += 1
+            else:
+                j += 1
 
     session_id = f"sesion-{uuid.uuid4().hex[:8]}"
     buy_order = f"orden-{uuid.uuid4().hex[:12]}"
+    return_url = "https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
+
+    # Reserva asociada a la transacción con expiración
+    reservas_tx[buy_order] = {"items": items, "expira": datetime.now() + timedelta(minutes=10)}
+    transacciones[buy_order] = {"items": items}
 
     response = tx.create(
         buy_order=buy_order,
         session_id=session_id,
         amount=amount,
-        return_url="https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
+        return_url=return_url
     )
-
-    # Guardamos los items asociados a esta transacción
-    transacciones[buy_order] = {"items": items}
 
     return jsonify({
         "token": response["token"],
         "url": response["url"]
     })
 
+# Confirmar transacción y manejar reservas/stock según resultado
 @app.route("/commit", methods=["POST", "GET"])
 def commit_transaction():
+    liberar_reservas_vencidas()
+
     token = request.args.get("token_ws") or request.form.get("token_ws")
     if not token:
         return jsonify({"status": "ERROR", "message": "Falta token_ws"}), 400
@@ -123,16 +222,27 @@ def commit_transaction():
     buy_order = response.get("buy_order")
     status = response.get("status")
 
-    # Si el pago falla, devolver stock
-    if status not in ["AUTHORIZED", "SUCCESS"]:
-        if buy_order in transacciones:
+    # Pago exitoso: eliminar reserva asociada (stock ya está descontado)
+    if status in ["AUTHORIZED", "SUCCESS"]:
+        reservas_tx.pop(buy_order, None)
+        transacciones.pop(buy_order, None)
+
+    # Pago fallido o no autorizado: devolver stock y eliminar reservas
+    else:
+        items = []
+        if buy_order in reservas_tx:
+            items = reservas_tx[buy_order]["items"]
+        elif buy_order in transacciones:
             items = transacciones[buy_order]["items"]
-            for it in items:
-                pid = int(it.get("id"))
-                qty = int(it.get("cantidad", 0))
-                if pid in productos:
-                    productos[pid]["stock"] += qty
-            del transacciones[buy_order]
+
+        for it in items:
+            pid = int(it["id"])
+            qty = int(it["cantidad"])
+            if pid in productos:
+                productos[pid]["stock"] += qty
+
+        reservas_tx.pop(buy_order, None)
+        transacciones.pop(buy_order, None)
 
     return jsonify(response)
 

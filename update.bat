@@ -3,7 +3,7 @@ REM Script para actualizar el repo en GitHub Pages
 REM Uso: update.bat "mensaje de commit"
 
 SET MSG=%1
-IF "%MSG%"=="" SET MSG=Actualizacion devuelva automáticamente si el pago falla v39
+IF "%MSG%"=="" SET MSG=Actualizacion tiempo en carrito v40
 
 echo 📦 Agregando cambios...
 git add .
