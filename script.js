@@ -1,18 +1,5 @@
-// Lista de productos de ejemplo con stock
-let productos = [
-  {id:1, nombre:"Notebook Usado", precio:120000, categoria:"electronica", imagen:"img/notebook.png", descripcion:"Notebook funcional con 4GB RAM", stock: 1},
-  {id:2, nombre:"Zapatos de Cuero", precio:25000, categoria:"vestuario", imagen:"img/zapatos.png", descripcion:"Zapatos en excelente estado", stock: 3},
-  {id:3, nombre:"Mesa de Madera", precio:50000, categoria:"hogar", imagen:"img/mesa.png", descripcion:"Mesa robusta de pino", stock: 2},
-  {id:4, nombre:"Reloj de Pared", precio:10000, categoria:"accesorios", imagen:"img/reloj.png", descripcion:"Reloj en buen estado", stock: 2},
-  {id:5, nombre:"Silla de Madera", precio:20000, categoria:"hogar", imagen:"img/silla.png", descripcion:"Silla artesanal buen estado", stock: 4},
-  {id:6, nombre:"Celular Usado", precio:80000, categoria:"electronica", imagen:"img/celular.png", descripcion:"Celular en buen estado", stock: 1},
-  {id:7, nombre:"Chaqueta Invierno", precio:30000, categoria:"vestuario", imagen:"img/chaqueta.png", descripcion:"Chaqueta abrigada poco uso", stock: 3},
-  {id:8, nombre:"Lámpara Escritorio", precio:15000, categoria:"hogar", imagen:"img/lampara.png", descripcion:"Lámpara funcional para oficina", stock: 2},
-  {id:9, nombre:"Audífonos Bluetooth", precio:35000, categoria:"electronica", imagen:"img/audifonos.png", descripcion:"Audífonos inalámbricos buen sonido", stock: 2},
-  {id:10, nombre:"Bolso Deportivo", precio:18000, categoria:"accesorios", imagen:"img/bolso.png", descripcion:"Bolso resistente para gimnasio", stock: 5}
-];
-
 // Estado global
+let productos = [];
 let carrito = new Map();
 let estado = {
   categoria: 'todos',
@@ -30,7 +17,33 @@ function getProducto(id) {
   return productos.find(x => x.id === id);
 }
 
-// Filtrar lista según estado
+/* --- Cargar productos desde backend --- */
+async function cargarProductos() {
+  try {
+    const res = await fetch("https://catalogo-venta.onrender.com/productos", {
+      headers: { "Content-Type": "application/json" }
+    });
+    productos = await res.json();
+
+    // Normaliza campos por si faltan en backend
+    productos = productos.map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      precio: p.precio,
+      categoria: p.categoria || 'otros',
+      imagen: p.imagen || `img/${(p.nombre || 'producto').toLowerCase().replace(/\s+/g,'')}.png`,
+      descripcion: p.descripcion || '',
+      stock: typeof p.stock === 'number' ? p.stock : 0
+    }));
+
+    renderCatalogo();
+  } catch (error) {
+    console.error("Error cargando productos:", error);
+    alert("No se pudo cargar el catálogo desde el servidor.");
+  }
+}
+
+/* --- Filtro, orden y paginación --- */
 function obtenerListaFiltrada() {
   let lista = [...productos];
   if (estado.categoria !== 'todos') {
@@ -44,7 +57,32 @@ function obtenerListaFiltrada() {
   return lista;
 }
 
-// Render catálogo con paginación y stock
+function renderPaginacion(total, totalPaginas, desde, hasta) {
+  const contPag = document.getElementById("paginacion");
+  const info = document.getElementById("info-pagina");
+
+  let html = `<button onclick="cambiarPagina(-1)" ${estado.pagina===1?"disabled":""}>Anterior</button>`;
+  for (let i=1; i<=totalPaginas; i++) {
+    html += `<button onclick="irPagina(${i})" class="${i===estado.pagina?"activo":""}">${i}</button>`;
+  }
+  html += `<button onclick="cambiarPagina(1)" ${estado.pagina===totalPaginas?"disabled":""}>Siguiente</button>`;
+  contPag.innerHTML = html;
+
+  info.textContent = total
+    ? `Mostrando ${desde+1}–${hasta} de ${total} productos`
+    : `Mostrando 0 de 0 productos`;
+}
+
+function cambiarPagina(delta) {
+  estado.pagina += delta;
+  renderCatalogo();
+}
+function irPagina(num) {
+  estado.pagina = num;
+  renderCatalogo();
+}
+
+/* --- Render catálogo --- */
 function renderCatalogo() {
   const cont = document.getElementById("catalogo");
   cont.innerHTML = "";
@@ -76,9 +114,8 @@ function renderCatalogo() {
         <button 
           onclick="agregarAlCarrito(${p.id})"
           ${agotado ? "disabled" : ""}
-          aria-disabled="${agotado}"
-          aria-label="${agotado ? "Producto agotado" : "Agregar al carrito"}"
           class="${agotado ? "btn-agregar agotado" : "btn-agregar"}"
+          aria-label="${agotado ? "Producto agotado" : "Agregar al carrito"}"
         >
           ${agotado ? "Agotado" : "Agregar al carrito"}
         </button>
@@ -90,52 +127,34 @@ function renderCatalogo() {
   renderPaginacion(total, totalPaginas, inicio, Math.min(fin, total));
 }
 
-// Render paginación
-function renderPaginacion(total, totalPaginas, desde, hasta) {
-  const contPag = document.getElementById("paginacion");
-  const info = document.getElementById("info-pagina");
+/* --- Carrito con stock en backend --- */
+async function agregarAlCarrito(id) {
+  try {
+    const res = await fetch("https://catalogo-venta.onrender.com/agregar-carrito", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ id, cantidad: 1 })
+    });
+    const data = await res.json();
 
-  let html = `<button onclick="cambiarPagina(-1)" ${estado.pagina===1?"disabled":""}>Anterior</button>`;
-  for (let i=1; i<=totalPaginas; i++) {
-    html += `<button onclick="irPagina(${i})" class="${i===estado.pagina?"activo":""}">${i}</button>`;
+    if (data.error) {
+      alert("No se pudo agregar: " + data.error);
+      return;
+    }
+
+    const p = getProducto(id);
+    if (p) p.stock = data.producto?.stock ?? (p.stock - 1); // usa stock devuelto por backend si existe
+
+    const entry = carrito.get(id) || { producto: p, cantidad: 0 };
+    entry.cantidad += 1;
+    carrito.set(id, entry);
+
+    renderCatalogo();
+    renderCarrito();
+  } catch (error) {
+    console.error("Error al agregar al carrito:", error);
+    alert("Error al agregar al carrito.");
   }
-  html += `<button onclick="cambiarPagina(1)" ${estado.pagina===totalPaginas?"disabled":""}>Siguiente</button>`;
-  contPag.innerHTML = html;
-
-  info.textContent = total
-    ? `Mostrando ${desde+1}–${hasta} de ${total} productos`
-    : `Mostrando 0 de 0 productos`;
-}
-
-function cambiarPagina(delta) {
-  estado.pagina += delta;
-  renderCatalogo();
-}
-function irPagina(num) {
-  estado.pagina = num;
-  renderCatalogo();
-}
-
-/* --- Carrito --- */
-function agregarAlCarrito(id) {
-  const p = getProducto(id);
-  if (!p) return;
-
-  if (p.stock <= 0) {
-    alert("Este producto está agotado.");
-    return;
-  }
-
-  // Decrementa stock en catálogo
-  p.stock -= 1;
-
-  // Suma al carrito
-  const entry = carrito.get(id) || { producto: p, cantidad: 0 };
-  entry.cantidad += 1;
-  carrito.set(id, entry);
-
-  renderCatalogo(); // Refresca stock visible
-  renderCarrito();
 }
 
 function renderCarrito() {
@@ -166,31 +185,43 @@ function renderCarrito() {
   contadorEl.textContent = cantidadTotal;
 }
 
-function quitarDelCarrito(id) {
+async function quitarDelCarrito(id) {
   const entry = carrito.get(id);
   if (!entry) return;
 
-  const { producto, cantidad } = entry;
-
-  // Devuelve stock al catálogo
-  const pGlobal = getProducto(id);
-  if (pGlobal) {
-    pGlobal.stock += cantidad;
+  try {
+    await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ items: [{ id, cantidad: entry.cantidad }] })
+    });
+  } catch (error) {
+    console.error("Error devolviendo stock:", error);
   }
 
   carrito.delete(id);
-  renderCatalogo();
+  await cargarProductos(); // refresca stock global
   renderCarrito();
 }
 
-// Vaciar carrito y reponer stock
-document.getElementById("btn-vaciar").addEventListener("click", ()=>{
+document.getElementById("btn-vaciar").addEventListener("click", async ()=>{
+  const items = [];
   carrito.forEach(({producto, cantidad}) => {
-    const pGlobal = getProducto(producto.id);
-    if (pGlobal) pGlobal.stock += cantidad;
+    items.push({ id: producto.id, cantidad });
   });
+
+  try {
+    await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ items })
+    });
+  } catch (error) {
+    console.error("Error devolviendo stock:", error);
+  }
+
   carrito.clear();
-  renderCatalogo();
+  await cargarProductos();
   renderCarrito();
 });
 
@@ -211,18 +242,17 @@ function ordenarPorPrecio(order) {
   renderCatalogo();
 }
 
-// Inicialización: carrito vacío en cada recarga
-document.addEventListener("DOMContentLoaded", ()=>{
-  // Forzar carrito vacío y sin persistencia
+/* --- Inicialización --- */
+document.addEventListener("DOMContentLoaded", async ()=>{
   carrito.clear();
   localStorage.removeItem("carrito");
   renderCarrito();
-  renderCatalogo();
+  await cargarProductos();
 });
 
+/* --- Pago con Webpay --- */
 async function pagarCarrito() {
   try {
-    // Calcula el total del carrito
     let total = 0;
     const items = [];
     carrito.forEach(({producto, cantidad}) => {
@@ -235,7 +265,6 @@ async function pagarCarrito() {
       return;
     }
 
-    // Llama al backend Flask en Render
     const res = await fetch("https://catalogo-venta.onrender.com/create-transaction", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
@@ -245,7 +274,6 @@ async function pagarCarrito() {
     const data = await res.json();
 
     if (data.token && data.url) {
-      // Redirige al formulario de pago de Webpay
       const form = document.createElement("form");
       form.method = "POST";
       form.action = data.url;
@@ -268,14 +296,15 @@ async function pagarCarrito() {
   }
 }
 
+/* --- Procesar commit (commit.html) --- */
 async function procesarCommit() {
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token_ws");
 
+    const cont = document.getElementById("resultado-pago");
+
     if (!token) {
-      console.warn("No se recibió token_ws en la URL");
-      const cont = document.getElementById("resultado-pago");
       cont.innerHTML = `
         <div class="card">
           <h2>⚠️ Falta token</h2>
@@ -295,10 +324,8 @@ async function procesarCommit() {
 
     const data = await res.json();
 
-    const cont = document.getElementById("resultado-pago");
-
     if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
-      // Limpia carrito (defensivo)
+      // Limpia carrito tras pago exitoso (defensivo)
       carrito.clear();
       localStorage.removeItem("carrito");
 
@@ -317,10 +344,10 @@ async function procesarCommit() {
       cont.innerHTML = `
         <div class="card">
           <h2>❌ Pago rechazado</h2>
-          <p><strong>Estado:</strong> ${data.status}</p>
-          <p><strong>Código de respuesta:</strong> ${data.response_code}</p>
-          <p><strong>Autorización:</strong> ${data.authorization_code}</p>
-          <p><strong>Fecha:</strong> ${data.transaction_date}</p>
+          <p><strong>Estado:</strong> ${data.status || 'UNKNOWN'}</p>
+          <p><strong>Código de respuesta:</strong> ${data.response_code ?? '—'}</p>
+          <p><strong>Autorización:</strong> ${data.authorization_code ?? '—'}</p>
+          <p><strong>Fecha:</strong> ${data.transaction_date ?? '—'}</p>
           <button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
             🔙 Volver a la tienda
           </button>
