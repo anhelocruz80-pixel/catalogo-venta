@@ -244,6 +244,16 @@ function ordenarPorPrecio(order) {
 
 /* --- Inicialización --- */
 document.addEventListener("DOMContentLoaded", async ()=>{
+  const saved = JSON.parse(localStorage.getItem("carrito") || "[]"); 
+  if (saved.length > 0) { 
+    try { 
+	   await fetch("https://catalogo-venta.onrender.com/devolver-carrito", { 
+	     method: "POST", 
+	     headers: {"Content-Type":"application/json"}, 
+		 body: JSON.stringify({ items: saved }) 
+	   }); 
+	} catch(e) { console.error("Error devolviendo stock al refrescar:", e); } 
+  }
   carrito.clear();
   localStorage.removeItem("carrito");
   renderCarrito();
