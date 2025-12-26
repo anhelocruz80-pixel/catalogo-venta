@@ -111,11 +111,30 @@ main {
   margin-top: 6px;
 }
 
+/* Botones de producto */
+.producto button {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: #0072c6; /* azul original */
+  color: #fff;
+  font-weight: bold;
+  font-size: 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.producto button:hover {
+  background: #005a9e; /* azul más oscuro al pasar el mouse */
+}
+
 .btn-agregar.agotado,
 .producto button:disabled {
   background: #ccc !important;
   color: #666 !important;
   cursor: not-allowed !important;
+  font-weight: normal;
 }
 
 /* Paginación */
