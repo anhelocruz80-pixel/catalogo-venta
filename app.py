@@ -77,6 +77,10 @@ def liberar_reservas_vencidas():
 def home():
     return "Backend funcionando correctamente 🚀"
 
+@app.route("/health")
+def health():
+    return jsonify({"ok": True, "time": datetime.now().isoformat()})
+
 # Catálogo: libera reservas vencidas antes de responder
 @app.route("/productos", methods=["GET"])
 def listar_productos():
@@ -155,7 +159,7 @@ def create_transaction():
     items = data.get("items", [])
     amount = 0
 
-    # Validar stock disponible (ya se pudo reservar vía agregar-carrito)
+    # Validar stock disponible (puede estar parcialmente reservado vía agregar-carrito)
     for it in items:
         pid = int(it["id"])
         qty = int(it["cantidad"])
@@ -163,17 +167,21 @@ def create_transaction():
         if not prod:
             return jsonify({"error": f"Producto {pid} no existe"}), 400
         if prod["stock"] < qty:
-            return jsonify({"error": "Stock insuficiente", "producto": prod["nombre"], "stock": prod["stock"]}), 400
+            return jsonify({
+                "error": "Stock insuficiente",
+                "producto": prod["nombre"],
+                "stock": prod["stock"]
+            }), 400
         amount += prod["precio"] * qty
 
-    # Descontar stock por si el flujo vino directo aquí (sin agregar-carrito)
-    # y consolidar reservas: restamos del stock y removemos reservas_click equivalentes
+    # Evitar doble descuento:
+    # - Consumimos reservas_click equivalentes primero
+    # - Si queda remanente, recién entonces restamos del stock
     for it in items:
         pid = int(it["id"])
         qty = int(it["cantidad"])
-        productos[pid]["stock"] -= qty
 
-        # Remover reservas_click equivalentes para evitar doble liberación
+        # Consumir reservas_click del mismo producto
         j = 0
         rem = qty
         while j < len(reservas_click) and rem > 0:
@@ -189,9 +197,19 @@ def create_transaction():
             else:
                 j += 1
 
+        # Si aún queda remanente, descuéntalo del stock (flujo directo sin agregar-carrito)
+        if rem > 0:
+            if productos[pid]["stock"] < rem:
+                return jsonify({
+                    "error": "Stock insuficiente al consolidar",
+                    "producto": productos[pid]["nombre"],
+                    "stock": productos[pid]["stock"]
+                }), 400
+            productos[pid]["stock"] -= rem
+
     session_id = f"sesion-{uuid.uuid4().hex[:8]}"
     buy_order = f"orden-{uuid.uuid4().hex[:12]}"
-    return_url = "https://anhelocruz80-pixel.github.io/catalogo-venta/commit"
+    return_url = "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
 
     # Reserva asociada a la transacción con expiración
     reservas_tx[buy_order] = {"items": items, "expira": datetime.now() + timedelta(minutes=10)}
