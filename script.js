@@ -204,25 +204,31 @@ async function quitarDelCarrito(id) {
   renderCarrito();
 }
 
-document.getElementById("btn-vaciar").addEventListener("click", async ()=>{
-  const items = [];
-  carrito.forEach(({producto, cantidad}) => {
-    items.push({ id: producto.id, cantidad });
-  });
+document.addEventListener("DOMContentLoaded", async ()=>{
+  // Recupera carrito guardado en localStorage
+  const saved = JSON.parse(localStorage.getItem("carrito") || "[]");
 
-  try {
-    await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ items })
-    });
-  } catch (error) {
-    console.error("Error devolviendo stock:", error);
+  // Si había productos, devuelve stock al backend
+  if (saved.length > 0) {
+    try {
+      await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ items: saved })
+      });
+      console.log("Stock devuelto al refrescar página");
+    } catch(e) {
+      console.error("Error devolviendo stock al refrescar:", e);
+    }
   }
 
+  // Limpia carrito en memoria y localStorage
   carrito.clear();
-  await cargarProductos();
+  localStorage.removeItem("carrito");
+
+  // Render inicial
   renderCarrito();
+  await cargarProductos();
 });
 
 /* --- Interacciones --- */
