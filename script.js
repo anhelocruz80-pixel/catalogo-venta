@@ -1,15 +1,15 @@
-//Lista de productos de ejemplo
+// Lista de productos de ejemplo con stock
 let productos = [
-  {id:1, nombre:"Notebook Usado", precio:120000, categoria:"electronica", imagen:"img/notebook.png", descripcion:"Notebook funcional con 4GB RAM"},
-  {id:2, nombre:"Zapatos de Cuero", precio:25000, categoria:"vestuario", imagen:"img/zapatos.png", descripcion:"Zapatos en excelente estado"},
-  {id:3, nombre:"Mesa de Madera", precio:50000, categoria:"hogar", imagen:"img/mesa.png", descripcion:"Mesa robusta de pino"},
-  {id:4, nombre:"Reloj de Pared", precio:10000, categoria:"accesorios", imagen:"img/reloj.png", descripcion:"Reloj en buen estado"},
-  {id:5, nombre:"Silla de Madera", precio:20000, categoria:"hogar", imagen:"img/silla.png", descripcion:"Silla artesanal buen estado"},
-  {id:6, nombre:"Celular Usado", precio:80000, categoria:"electronica", imagen:"img/celular.png", descripcion:"Celular en buen estado"},
-  {id:7, nombre:"Chaqueta Invierno", precio:30000, categoria:"vestuario", imagen:"img/chaqueta.png", descripcion:"Chaqueta abrigada poco uso"},
-  {id:8, nombre:"Lámpara Escritorio", precio:15000, categoria:"hogar", imagen:"img/lampara.png", descripcion:"Lámpara funcional para oficina"},
-  {id:9, nombre:"Audífonos Bluetooth", precio:35000, categoria:"electronica", imagen:"img/audifonos.png", descripcion:"Audífonos inalámbricos buen sonido"},
-  {id:10, nombre:"Bolso Deportivo", precio:18000, categoria:"accesorios", imagen:"img/bolso.png", descripcion:"Bolso resistente para gimnasio"}
+  {id:1, nombre:"Notebook Usado", precio:120000, categoria:"electronica", imagen:"img/notebook.png", descripcion:"Notebook funcional con 4GB RAM", stock: 1},
+  {id:2, nombre:"Zapatos de Cuero", precio:25000, categoria:"vestuario", imagen:"img/zapatos.png", descripcion:"Zapatos en excelente estado", stock: 3},
+  {id:3, nombre:"Mesa de Madera", precio:50000, categoria:"hogar", imagen:"img/mesa.png", descripcion:"Mesa robusta de pino", stock: 2},
+  {id:4, nombre:"Reloj de Pared", precio:10000, categoria:"accesorios", imagen:"img/reloj.png", descripcion:"Reloj en buen estado", stock: 2},
+  {id:5, nombre:"Silla de Madera", precio:20000, categoria:"hogar", imagen:"img/silla.png", descripcion:"Silla artesanal buen estado", stock: 4},
+  {id:6, nombre:"Celular Usado", precio:80000, categoria:"electronica", imagen:"img/celular.png", descripcion:"Celular en buen estado", stock: 1},
+  {id:7, nombre:"Chaqueta Invierno", precio:30000, categoria:"vestuario", imagen:"img/chaqueta.png", descripcion:"Chaqueta abrigada poco uso", stock: 3},
+  {id:8, nombre:"Lámpara Escritorio", precio:15000, categoria:"hogar", imagen:"img/lampara.png", descripcion:"Lámpara funcional para oficina", stock: 2},
+  {id:9, nombre:"Audífonos Bluetooth", precio:35000, categoria:"electronica", imagen:"img/audifonos.png", descripcion:"Audífonos inalámbricos buen sonido", stock: 2},
+  {id:10, nombre:"Bolso Deportivo", precio:18000, categoria:"accesorios", imagen:"img/bolso.png", descripcion:"Bolso resistente para gimnasio", stock: 5}
 ];
 
 // Estado global
@@ -26,6 +26,9 @@ let estado = {
 function formatoCLP(n) {
   return `$${n.toLocaleString('es-CL')}`;
 }
+function getProducto(id) {
+  return productos.find(x => x.id === id);
+}
 
 // Filtrar lista según estado
 function obtenerListaFiltrada() {
@@ -41,7 +44,7 @@ function obtenerListaFiltrada() {
   return lista;
 }
 
-// Render catálogo con paginación
+// Render catálogo con paginación y stock
 function renderCatalogo() {
   const cont = document.getElementById("catalogo");
   cont.innerHTML = "";
@@ -61,14 +64,24 @@ function renderCatalogo() {
     cont.innerHTML = `<div class="mensaje-vacio">No se encontraron productos.</div>`;
   } else {
     paginaItems.forEach(p => {
+      const agotado = p.stock <= 0;
       const card = document.createElement("div");
       card.className = "producto";
       card.innerHTML = `
         <img src="${p.imagen}" alt="${p.nombre}">
         <h2>${p.nombre}</h2>
         <p class="precio">${formatoCLP(p.precio)}</p>
-        <p>${p.descripcion}</p>
-        <button onclick="agregarAlCarrito(${p.id})">Agregar al carrito</button>
+        <p class="descripcion">${p.descripcion}</p>
+        <p class="stock">Stock: ${p.stock}</p>
+        <button 
+          onclick="agregarAlCarrito(${p.id})"
+          ${agotado ? "disabled" : ""}
+          aria-disabled="${agotado}"
+          aria-label="${agotado ? "Producto agotado" : "Agregar al carrito"}"
+          class="${agotado ? "btn-agregar agotado" : "btn-agregar"}"
+        >
+          ${agotado ? "Agotado" : "Agregar al carrito"}
+        </button>
       `;
       cont.appendChild(card);
     });
@@ -105,11 +118,23 @@ function irPagina(num) {
 
 /* --- Carrito --- */
 function agregarAlCarrito(id) {
-  const p = productos.find(x => x.id === id);
-  const entry = carrito.get(id) || { producto:p, cantidad:0 };
-  entry.cantidad++;
+  const p = getProducto(id);
+  if (!p) return;
+
+  if (p.stock <= 0) {
+    alert("Este producto está agotado.");
+    return;
+  }
+
+  // Decrementa stock en catálogo
+  p.stock -= 1;
+
+  // Suma al carrito
+  const entry = carrito.get(id) || { producto: p, cantidad: 0 };
+  entry.cantidad += 1;
   carrito.set(id, entry);
-  guardarCarrito();
+
+  renderCatalogo(); // Refresca stock visible
   renderCarrito();
 }
 
@@ -126,12 +151,12 @@ function renderCarrito() {
   } else {
     carrito.forEach(({producto,cantidad})=>{
       cont.innerHTML += `
-		<div class="carrito-linea"> 
-			<span class="nombre-producto">${producto.nombre} x${cantidad}</span> 
-			<span class="precio-producto">${formatoCLP(producto.precio*cantidad)}</span> 
-			<button class="btn-eliminar" onclick="quitarDelCarrito(${producto.id})" aria-label="Eliminar producto">✕</button> 
-		</div>
-		`;
+        <div class="carrito-linea"> 
+          <span class="nombre-producto">${producto.nombre} x${cantidad}</span> 
+          <span class="precio-producto">${formatoCLP(producto.precio*cantidad)}</span> 
+          <button class="btn-eliminar" onclick="quitarDelCarrito(${producto.id})" aria-label="Eliminar producto">✕</button> 
+        </div>
+      `;
       total += producto.precio*cantidad;
       cantidadTotal += cantidad;
     });
@@ -142,25 +167,30 @@ function renderCarrito() {
 }
 
 function quitarDelCarrito(id) {
-  carrito.delete(id);
-  guardarCarrito();
-  renderCarrito();
-}
+  const entry = carrito.get(id);
+  if (!entry) return;
 
-function guardarCarrito() {
-  localStorage.setItem("carrito", JSON.stringify([...carrito]));
-}
-function cargarCarrito() {
-  const data = localStorage.getItem("carrito");
-  if(data){
-    carrito = new Map(JSON.parse(data));
+  const { producto, cantidad } = entry;
+
+  // Devuelve stock al catálogo
+  const pGlobal = getProducto(id);
+  if (pGlobal) {
+    pGlobal.stock += cantidad;
   }
+
+  carrito.delete(id);
+  renderCatalogo();
   renderCarrito();
 }
 
+// Vaciar carrito y reponer stock
 document.getElementById("btn-vaciar").addEventListener("click", ()=>{
+  carrito.forEach(({producto, cantidad}) => {
+    const pGlobal = getProducto(producto.id);
+    if (pGlobal) pGlobal.stock += cantidad;
+  });
   carrito.clear();
-  guardarCarrito();
+  renderCatalogo();
   renderCarrito();
 });
 
@@ -181,9 +211,12 @@ function ordenarPorPrecio(order) {
   renderCatalogo();
 }
 
-// Inicialización
+// Inicialización: carrito vacío en cada recarga
 document.addEventListener("DOMContentLoaded", ()=>{
-  cargarCarrito();
+  // Forzar carrito vacío y sin persistencia
+  carrito.clear();
+  localStorage.removeItem("carrito");
+  renderCarrito();
   renderCatalogo();
 });
 
@@ -191,8 +224,10 @@ async function pagarCarrito() {
   try {
     // Calcula el total del carrito
     let total = 0;
+    const items = [];
     carrito.forEach(({producto, cantidad}) => {
       total += producto.precio * cantidad;
+      items.push({ id: producto.id, nombre: producto.nombre, precio: producto.precio, cantidad });
     });
 
     if (total <= 0) {
@@ -200,23 +235,16 @@ async function pagarCarrito() {
       return;
     }
 
-    console.log("Monto total a pagar:", total);
-
     // Llama al backend Flask en Render
     const res = await fetch("https://catalogo-venta.onrender.com/create-transaction", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({amount: total})
+      body: JSON.stringify({ amount: total, items })
     });
 
     const data = await res.json();
-    console.log("Respuesta del backend:", data);
 
-    // Verifica si la respuesta tiene token y url
     if (data.token && data.url) {
-      console.log("Token recibido:", data.token);
-      console.log("URL de Webpay:", data.url);
-
       // Redirige al formulario de pago de Webpay
       const form = document.createElement("form");
       form.method = "POST";
@@ -232,6 +260,7 @@ async function pagarCarrito() {
       form.submit();
     } else {
       alert("Error iniciando pago. Revisa la consola para más detalles.");
+      console.error("Respuesta inesperada:", data);
     }
   } catch (error) {
     console.error("Error en pagarCarrito:", error);
@@ -241,65 +270,75 @@ async function pagarCarrito() {
 
 async function procesarCommit() {
   try {
-    // Obtiene el token que Webpay envía en la URL
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token_ws");
 
     if (!token) {
       console.warn("No se recibió token_ws en la URL");
+      const cont = document.getElementById("resultado-pago");
+      cont.innerHTML = `
+        <div class="card">
+          <h2>⚠️ Falta token</h2>
+          <p>No se recibió el token de pago.</p>
+          <button class="warning" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+            🔙 Volver a la tienda
+          </button>
+        </div>
+      `;
       return;
     }
 
-    console.log("Token recibido en commit:", token);
-
-    // Llama al backend para confirmar la transacción
     const res = await fetch(`https://catalogo-venta.onrender.com/commit?token_ws=${token}`, {
       method: "GET",
       headers: {"Content-Type":"application/json"}
     });
 
     const data = await res.json();
-    console.log("Respuesta del commit:", data);
 
-    // Muestra el resultado al usuario
     const cont = document.getElementById("resultado-pago");
 
-	if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
-	  cont.innerHTML = `
-		<div class="card">
-		  <h2>✅ Pago exitoso</h2>
-		  <p><strong>Orden:</strong> ${data.buy_order}</p>
-		  <p><strong>Monto:</strong> $${data.amount}</p>
-		  <p><strong>Fecha:</strong> ${data.transaction_date}</p>
-		  <button class="success" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
-			🔙 Volver a la tienda
-		  </button>
-		</div>
-	  `;
-	} else {
-	  cont.innerHTML = `
-		<div class="card">
-		  <h2>❌ Pago rechazado</h2>
-		  <p><strong>Estado:</strong> ${data.status}</p>
-		  <p><strong>Código de respuesta:</strong> ${data.response_code}</p>
-		  <p><strong>Autorización:</strong> ${data.authorization_code}</p>
-		  <p><strong>Fecha:</strong> ${data.transaction_date}</p>
-		  <button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
-			🔙 Volver a la tienda
-		  </button>
-		</div>
-	  `;
-	}
+    if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
+      // Limpia carrito (defensivo)
+      carrito.clear();
+      localStorage.removeItem("carrito");
+
+      cont.innerHTML = `
+        <div class="card">
+          <h2>✅ Pago exitoso</h2>
+          <p><strong>Orden:</strong> ${data.buy_order}</p>
+          <p><strong>Monto:</strong> $${data.amount}</p>
+          <p><strong>Fecha:</strong> ${data.transaction_date}</p>
+          <button class="success" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+            🔙 Volver a la tienda
+          </button>
+        </div>
+      `;
+    } else {
+      cont.innerHTML = `
+        <div class="card">
+          <h2>❌ Pago rechazado</h2>
+          <p><strong>Estado:</strong> ${data.status}</p>
+          <p><strong>Código de respuesta:</strong> ${data.response_code}</p>
+          <p><strong>Autorización:</strong> ${data.authorization_code}</p>
+          <p><strong>Fecha:</strong> ${data.transaction_date}</p>
+          <button class="error" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+            🔙 Volver a la tienda
+          </button>
+        </div>
+      `;
+    }
 
   } catch (error) {
     console.error("Error al procesar commit:", error);
     const cont = document.getElementById("resultado-pago");
     cont.innerHTML = `
-	<h2>⚠️ Error al confirmar el pago</h2>
-	<p>Revisa la consola para más detalles.</p>
-	<button class="warning" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
-      🔙 Volver a la tienda
-    </button>
-	`;
+      <div class="card">
+        <h2>⚠️ Error al confirmar el pago</h2>
+        <p>Revisa la consola para más detalles.</p>
+        <button class="warning" onclick="window.location.href='https://anhelocruz80-pixel.github.io/catalogo-venta/'">
+          🔙 Volver a la tienda
+        </button>
+      </div>
+    `;
   }
 }

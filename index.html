@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Catálogo de Usados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -10,7 +11,7 @@
     <h1>Catálogo de Productos Usados</h1>
 
     <!-- Menú de categorías -->
-    <nav id="menu-categorias">
+    <nav id="menu-categorias" aria-label="Categorías">
       <button onclick="filtrar('todos')">Todos</button>
       <button onclick="filtrar('electronica')">Electrónica</button>
       <button onclick="filtrar('vestuario')">Vestuario</button>
@@ -19,6 +20,7 @@
     </nav>
 
     <!-- Menú móvil -->
+    <label for="menu-mobile" class="sr-only">Elegir categoría</label>
     <select id="menu-mobile" onchange="filtrar(this.value)">
       <option value="todos">Todos</option>
       <option value="electronica">Electrónica</option>
@@ -29,8 +31,8 @@
 
     <!-- Buscador y ordenamiento -->
     <div class="busqueda">
-      <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="buscarProducto()">
-      <select id="ordenar" onchange="ordenarPorPrecio(this.value)">
+      <input type="text" id="buscador" placeholder="Buscar producto..." onkeyup="buscarProducto()" aria-label="Buscar producto">
+      <select id="ordenar" onchange="ordenarPorPrecio(this.value)" aria-label="Ordenar por precio">
         <option value="asc">Precio ↑</option>
         <option value="desc">Precio ↓</option>
       </select>
@@ -46,12 +48,12 @@
     </section>
 
     <!-- Carrito -->
-    <aside id="carrito">
+    <aside id="carrito" aria-live="polite">
       <h2>🛒 Carrito (<span id="carrito-contador">0</span>)</h2>
       <div id="carrito-items"></div>
       <div id="carrito-total"></div>
-      <button id="btn-vaciar">Vaciar carrito</button>
-	  <button id="btn-pagar" onclick="pagarCarrito()">Pagar con Webpay</button>
+      <button id="btn-vaciar" aria-label="Vaciar carrito">Vaciar carrito</button>
+      <button id="btn-pagar" onclick="pagarCarrito()" aria-label="Pagar con Webpay">Pagar con Webpay</button>
     </aside>
   </main>
 
