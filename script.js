@@ -11,10 +11,15 @@ let estado = {
 
 // Helpers
 function formatoCLP(n) {
-  return `$${n.toLocaleString('es-CL')}`;
+  return `$${Number(n).toLocaleString('es-CL')}`;
 }
 function getProducto(id) {
   return productos.find(x => x.id === id);
+}
+function persistirCarrito() {
+  const saved = [];
+  carrito.forEach(({ producto, cantidad }) => saved.push({ id: producto.id, cantidad }));
+  localStorage.setItem("carrito", JSON.stringify(saved));
 }
 
 /* --- Cargar productos desde backend --- */
@@ -23,10 +28,10 @@ async function cargarProductos() {
     const res = await fetch("https://catalogo-venta.onrender.com/productos", {
       headers: { "Content-Type": "application/json" }
     });
-    productos = await res.json();
+    const data = await res.json();
 
     // Normaliza campos por si faltan en backend
-    productos = productos.map(p => ({
+    productos = (data || []).map(p => ({
       id: p.id,
       nombre: p.nombre,
       precio: p.precio,
@@ -114,7 +119,7 @@ function renderCatalogo() {
         <button 
           onclick="agregarAlCarrito(${p.id})"
           ${agotado ? "disabled" : ""}
-          class="${agotado ? "btn-agregar agotado" : "btn-agregar"}"
+          class="${agotado ? "btn-agotar agotado" : "btn-agregar"}"
           aria-label="${agotado ? "Producto agotado" : "Agregar al carrito"}"
         >
           ${agotado ? "Agotado" : "Agregar al carrito"}
@@ -143,12 +148,13 @@ async function agregarAlCarrito(id) {
     }
 
     const p = getProducto(id);
-    if (p) p.stock = data.producto?.stock ?? (p.stock - 1); // usa stock devuelto por backend si existe
+    if (p) p.stock = data.producto?.stock ?? (p.stock - 1); // usa stock del backend si viene
 
     const entry = carrito.get(id) || { producto: p, cantidad: 0 };
     entry.cantidad += 1;
     carrito.set(id, entry);
 
+    persistirCarrito();
     renderCatalogo();
     renderCarrito();
   } catch (error) {
@@ -200,35 +206,31 @@ async function quitarDelCarrito(id) {
   }
 
   carrito.delete(id);
+  persistirCarrito();
   await cargarProductos(); // refresca stock global
   renderCarrito();
 }
 
-document.addEventListener("DOMContentLoaded", async ()=>{
-  // Recupera carrito guardado en localStorage
-  const saved = JSON.parse(localStorage.getItem("carrito") || "[]");
+document.getElementById("btn-vaciar").addEventListener("click", async ()=>{
+  const items = [];
+  carrito.forEach(({producto, cantidad}) => {
+    items.push({ id: producto.id, cantidad });
+  });
 
-  // Si había productos, devuelve stock al backend
-  if (saved.length > 0) {
-    try {
-      await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ items: saved })
-      });
-      console.log("Stock devuelto al refrescar página");
-    } catch(e) {
-      console.error("Error devolviendo stock al refrescar:", e);
-    }
+  try {
+    await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ items })
+    });
+  } catch (error) {
+    console.error("Error devolviendo stock:", error);
   }
 
-  // Limpia carrito en memoria y localStorage
   carrito.clear();
-  localStorage.removeItem("carrito");
-
-  // Render inicial
-  renderCarrito();
+  persistirCarrito(); // guarda vacío
   await cargarProductos();
+  renderCarrito();
 });
 
 /* --- Interacciones --- */
@@ -248,20 +250,29 @@ function ordenarPorPrecio(order) {
   renderCatalogo();
 }
 
-/* --- Inicialización --- */
+/* --- Inicialización con devolución de stock al refrescar --- */
 document.addEventListener("DOMContentLoaded", async ()=>{
-  const saved = JSON.parse(localStorage.getItem("carrito") || "[]"); 
-  if (saved.length > 0) { 
-    try { 
-	   await fetch("https://catalogo-venta.onrender.com/devolver-carrito", { 
-	     method: "POST", 
-	     headers: {"Content-Type":"application/json"}, 
-		 body: JSON.stringify({ items: saved }) 
-	   }); 
-	} catch(e) { console.error("Error devolviendo stock al refrescar:", e); } 
+  // Recupera carrito guardado en localStorage
+  const saved = JSON.parse(localStorage.getItem("carrito") || "[]");
+
+  // Si había productos guardados, devuelve stock al backend
+  if (Array.isArray(saved) && saved.length > 0) {
+    try {
+      await fetch("https://catalogo-venta.onrender.com/devolver-carrito", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ items: saved })
+      });
+      console.log("Stock devuelto al refrescar página");
+    } catch(e) {
+      console.error("Error devolviendo stock al refrescar:", e);
+    }
   }
+
+  // Limpia carrito en memoria y localStorage
   carrito.clear();
-  localStorage.removeItem("carrito");
+  localStorage.setItem("carrito", JSON.stringify([]));
+
   renderCarrito();
   await cargarProductos();
 });
@@ -351,7 +362,7 @@ async function procesarCommit() {
     if (data.status === "AUTHORIZED" || data.status === "SUCCESS") {
       // Limpia carrito tras pago exitoso
       carrito.clear();
-      localStorage.removeItem("carrito");
+      localStorage.setItem("carrito", JSON.stringify([]));
 
       cont.innerHTML = `
         <div class="card">
@@ -365,7 +376,7 @@ async function procesarCommit() {
         </div>
       `;
     } else {
-      // Pago rechazado → backend ya devolvió stock (según app.py)
+      // Pago rechazado → backend ya devolvió stock
       cont.innerHTML = `
         <div class="card">
           <h2>❌ Pago rechazado</h2>
@@ -394,3 +405,11 @@ async function procesarCommit() {
     `;
   }
 }
+
+/* --- Sincronización entre pestañas (opcional) --- */
+window.addEventListener("storage", async (e) => {
+  if (e.key === "carrito") {
+    await cargarProductos();
+    renderCarrito();
+  }
+});
