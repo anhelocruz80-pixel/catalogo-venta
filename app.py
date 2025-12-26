@@ -45,6 +45,10 @@ reservas_tx = {}     # {buy_order: {"items": [{id, cantidad}], "expira": datetim
 # Transacciones registradas (para commit y devoluciones por fallo)
 transacciones = {}
 
+# --- Logging helper ---
+def log(msg):
+    print(f"[{datetime.now().isoformat()}] {msg}")
+
 # Utilidad: liberar reservas vencidas (click y transacción)
 def liberar_reservas_vencidas():
     ahora = datetime.now()
@@ -58,6 +62,7 @@ def liberar_reservas_vencidas():
             qty = int(r["cantidad"])
             if pid in productos:
                 productos[pid]["stock"] += qty
+                log(f"Reserva vencida liberada: Producto {pid}, cantidad {qty}")
             reservas_click.pop(i)
         else:
             i += 1
@@ -71,6 +76,7 @@ def liberar_reservas_vencidas():
             qty = int(it["cantidad"])
             if pid in productos:
                 productos[pid]["stock"] += qty
+                log(f"Reserva de transacción vencida liberada: Orden {bo}, Producto {pid}, cantidad {qty}")
         del reservas_tx[bo]
 
 @app.route("/")
@@ -109,6 +115,7 @@ def agregar_carrito():
         "cantidad": cantidad,
         "expira": datetime.now() + timedelta(minutes=10)
     })
+    log(f"Reserva creada: Producto {producto_id}, cantidad {cantidad}")
 
     return jsonify({"message": "Agregado", "producto": productos[producto_id]})
 
@@ -126,6 +133,7 @@ def devolver_carrito():
         qty = int(it.get("cantidad", 0))
         if pid in productos:
             productos[pid]["stock"] += qty
+            log(f"Stock devuelto manualmente: Producto {pid}, cantidad {qty}")
 
     # Consumir reservas_click equivalentes para evitar doble liberación posterior
     for it in items:
@@ -214,6 +222,7 @@ def create_transaction():
     # Reserva asociada a la transacción con expiración
     reservas_tx[buy_order] = {"items": items, "expira": datetime.now() + timedelta(minutes=10)}
     transacciones[buy_order] = {"items": items}
+    log(f"Transacción creada: Orden {buy_order}, items {items}")
 
     response = tx.create(
         buy_order=buy_order,
@@ -244,6 +253,7 @@ def commit_transaction():
     if status in ["AUTHORIZED", "SUCCESS"]:
         reservas_tx.pop(buy_order, None)
         transacciones.pop(buy_order, None)
+        log(f"Pago exitoso: Orden {buy_order}")
 
     # Pago fallido o no autorizado: devolver stock y eliminar reservas
     else:
@@ -258,6 +268,7 @@ def commit_transaction():
             qty = int(it["cantidad"])
             if pid in productos:
                 productos[pid]["stock"] += qty
+                log(f"Stock devuelto por pago fallido: Orden {buy_order}, Producto {pid}, cantidad {qty}")
 
         reservas_tx.pop(buy_order, None)
         transacciones.pop(buy_order, None)
