@@ -28,7 +28,7 @@ async function cargarProductos() {
     const res = await fetch("https://catalogo-venta.onrender.com/productos", {
       headers: { "Content-Type": "application/json" }
     });
-    const data = await res.json();
+    let data = await res.json();
 
     // Normaliza campos por si faltan en backend
     productos = (data || []).map(p => ({
@@ -119,7 +119,7 @@ function renderCatalogo() {
         <button 
           onclick="agregarAlCarrito(${p.id})"
           ${agotado ? "disabled" : ""}
-          class="${agotado ? "btn-agotar agotado" : "btn-agregar"}"
+          class="${agotado ? "btn-agregar agotado" : "btn-agregar"}"
           aria-label="${agotado ? "Producto agotado" : "Agregar al carrito"}"
         >
           ${agotado ? "Agotado" : "Agregar al carrito"}
@@ -148,7 +148,7 @@ async function agregarAlCarrito(id) {
     }
 
     const p = getProducto(id);
-    if (p) p.stock = data.producto?.stock ?? (p.stock - 1); // usa stock del backend si viene
+    if (p) p.stock = data.producto?.stock ?? (p.stock - 1); // usa stock devuelto por backend si existe
 
     const entry = carrito.get(id) || { producto: p, cantidad: 0 };
     entry.cantidad += 1;
@@ -376,7 +376,7 @@ async function procesarCommit() {
         </div>
       `;
     } else {
-      // Pago rechazado → backend ya devolvió stock
+      // Pago rechazado → backend ya devolvió stock (según app.py)
       cont.innerHTML = `
         <div class="card">
           <h2>❌ Pago rechazado</h2>
@@ -413,3 +413,4 @@ window.addEventListener("storage", async (e) => {
     renderCarrito();
   }
 });
+
