@@ -20,7 +20,7 @@ CORS(app, supports_credentials=True,
 
 # Conexión a PostgreSQL (Railway)
 PGHOST = os.environ.get("PGHOST")
-PGPORT = os.environ.get("PGPORT", "5432")
+PGPORT = os.environ.get("PGPORT", "22484")
 PGDATABASE = os.environ.get("PGDATABASE")
 PGUSER = os.environ.get("PGUSER", "postgres")
 PGPASSWORD = os.environ.get("PGPASSWORD")
