@@ -140,9 +140,9 @@ def listar_productos():
             SELECT id, nombre, descripcion, categoria, precio, stock, activo
             FROM productos WHERE activo = TRUE ORDER BY id
         """)).mappings().all()
-   # Convertir cada RowMapping en dict 
-     productos = [dict(row) for row in rows] 
-     return jsonify(productos)
+    # Convertir cada RowMapping en dict
+    productos = [dict(row) for row in rows]
+    return jsonify(productos)
 
 # Agrega al carrito: descuenta stock y audita (igual que tu flujo actual)
 @app.route("/agregar-carrito", methods=["POST"])
