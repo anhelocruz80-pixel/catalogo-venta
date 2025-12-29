@@ -3,7 +3,7 @@ REM Script para actualizar el repo en GitHub Pages
 REM Uso: update.bat "mensaje de commit"
 
 SET MSG=%1
-IF "%MSG%"=="" SET MSG=Actualizacion integracion bd posgertsql v55
+IF "%MSG%"=="" SET MSG=Actualizacion integracion bd posgertsql v56
 
 echo 📦 Agregando cambios...
 git add .
