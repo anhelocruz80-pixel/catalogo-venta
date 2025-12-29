@@ -25,7 +25,7 @@ PGDATABASE = os.environ.get("PGDATABASE")
 PGUSER = os.environ.get("PGUSER", "postgres")
 PGPASSWORD = os.environ.get("PGPASSWORD")
 
-db_url = f"postgresql+psycopg2://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}"
+db_url = f"postgresql+psycopg://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}"
 engine = create_engine(db_url, poolclass=NullPool, future=True)
 
 # Transbank (TEST)
