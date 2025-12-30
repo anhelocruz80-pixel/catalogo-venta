@@ -297,8 +297,8 @@ def commit_transaction():
             # Pago ok: no movemos stock (ya fue reservado al agregar-carrito)
             conn.execute(text("""
                 INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                SELECT producto_id, 0, 'pago', :bo FROM transaccion_items WHERE buy_order=:bo
-            """), {"bo": buy_order})
+                SELECT producto_id, 0, 'pago', :ref FROM transaccion_items WHERE buy_order=:bo
+            """), {"bo": buy_order,"ref": buy_order})
             log(f"Pago exitoso: {buy_order}")
 
         else:
