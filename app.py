@@ -111,7 +111,7 @@ def create_transaction():
 
     buy_order = f"orden-{uuid.uuid4().hex[:12]}"
     session_id = uuid.uuid4().hex[:8]
-    return_url = "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
+    return_url = "https://catalogo-venta.onrender.com/commit"
 
     resp = tx.create(buy_order, session_id, total, return_url)
 
@@ -150,41 +150,33 @@ def commit():
     if not token:
         return "Token faltante", 400
 
+    # 1️⃣ CONFIRMAR CON WEBPAY
     try:
         resp = tx.commit(token)
     except Exception as e:
-        print("Error Webpay commit:", e)
+        print("ERROR COMMIT WEBPAY:", e)
         return "Error confirmando pago", 500
 
-    buy_order = resp.get("buy_order")
-    status = resp.get("status")
+    buy_order = resp["buy_order"]
+    status = resp["status"]
 
     with engine.begin() as conn:
-        # actualizar estado de la transacción
+        # 2️⃣ ACTUALIZAR TRANSACCIÓN
         conn.execute(text("""
             UPDATE transacciones
-            SET tb_status = :st, updated_at = NOW()
+            SET tb_status = :st
             WHERE buy_order = :bo
         """), {"st": status, "bo": buy_order})
 
-        if status == "AUTHORIZED":
-            # pago exitoso
-            conn.execute(text("""
-                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                SELECT producto_id, 0, 'pago', :ref
-                FROM transaccion_items
-                WHERE buy_order = :bo
-            """), {"bo": buy_order, "ref": buy_order})
-
-        else:
-            # 🔥 PAGO RECHAZADO → DEVOLVER STOCK DESDE RESERVAS
+        if status != "AUTHORIZED":
+            # 3️⃣ DEVOLVER STOCK (RECHAZO)
             reservas = conn.execute(text("""
                 SELECT producto_id, SUM(-cambio) AS cantidad
                 FROM audit_stock
-                WHERE referencia = :ref
+                WHERE referencia = :bo
                   AND motivo = 'reserva'
                 GROUP BY producto_id
-            """), {"ref": buy_order}).all()
+            """), {"bo": buy_order}).all()
 
             for pid, qty in reservas:
                 conn.execute(text("""
@@ -198,6 +190,7 @@ def commit():
                     VALUES (:pid, :chg, 'reversa', :ref)
                 """), {"pid": pid, "chg": qty, "ref": buy_order})
 
+    # 4️⃣ REDIRIGIR AL FRONTEND
     return redirect(
         f"https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
         f"?status={status}&order={buy_order}"
