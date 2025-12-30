@@ -118,15 +118,40 @@ def liberar_reservas():
 # -----------------------------------------------------------------------------
 # Devolver stock
 # -----------------------------------------------------------------------------
+
 @app.route("/devolver-carrito", methods=["POST"])
 def devolver_carrito():
     items = request.json.get("items", [])
+
     with engine.begin() as conn:
         for it in items:
-            conn.execute(
-                text("UPDATE productos SET stock = stock + :q WHERE id=:id"),
-                {"q": it["cantidad"], "id": it["id"]}
-            )
+            pid = it["id"]
+            qty = it["cantidad"]
+
+            # 1️⃣ devolver stock
+            conn.execute(text("""
+                UPDATE productos
+                SET stock = stock + :q
+                WHERE id = :pid
+            """), {"q": qty, "pid": pid})
+
+            # 2️⃣ cerrar reservas pendientes
+            conn.execute(text("""
+                UPDATE audit_stock
+                SET motivo = 'liberada',
+                    referencia = 'liberada'
+                WHERE producto_id = :pid
+                  AND motivo = 'reserva'
+                  AND referencia = 'pendiente'
+                LIMIT :q
+            """), {"pid": pid, "q": qty})
+
+            # 3️⃣ registrar evento explícito
+            conn.execute(text("""
+                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
+                VALUES (:pid, :chg, 'liberacion', 'carrito')
+            """), {"pid": pid, "chg": qty})
+
     return jsonify({"ok": True})
 
 # -----------------------------------------------------------------------------
