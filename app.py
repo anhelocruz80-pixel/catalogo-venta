@@ -136,28 +136,67 @@ def create_transaction():
 @app.route("/commit", methods=["POST", "GET"])
 def commit():
     token = request.values.get("token_ws")
-    resp = tx.commit(token)
+    if not token:
+        return "Token faltante", 400
 
-    buy_order = resp["buy_order"]
-    status = resp["status"]
+    try:
+        resp = tx.commit(token)
+    except Exception as e:
+        print("Error Webpay commit:", e)
+        return "Error confirmando pago", 500
+
+    buy_order = resp.get("buy_order")
+    status = resp.get("status")
 
     with engine.begin() as conn:
+        # actualizar estado
         conn.execute(text("""
-            UPDATE transacciones SET tb_status=:st WHERE buy_order=:bo
+            UPDATE transacciones
+            SET tb_status = :st, updated_at = NOW()
+            WHERE buy_order = :bo
         """), {"st": status, "bo": buy_order})
 
         if status == "AUTHORIZED":
+            # pago exitoso
             conn.execute(text("""
                 INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
                 SELECT producto_id, 0, 'pago', :ref
-                FROM transaccion_items WHERE buy_order=:bo
+                FROM transaccion_items
+                WHERE buy_order = :bo
             """), {"bo": buy_order, "ref": buy_order})
 
+        else:
+            # 🔥 PAGO RECHAZADO → DEVOLVER STOCK
+            items = conn.execute(text("""
+                SELECT producto_id, cantidad
+                FROM transaccion_items
+                WHERE buy_order = :bo
+            """), {"bo": buy_order}).all()
+
+            for pid, qty in items:
+                conn.execute(text("""
+                    UPDATE productos
+                    SET stock = stock + :q
+                    WHERE id = :pid
+                """), {"q": qty, "pid": pid})
+
+                conn.execute(text("""
+                    INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
+                    VALUES (:pid, :chg, 'reversa', :ref)
+                """), {
+                    "pid": pid,
+                    "chg": qty,
+                    "ref": buy_order
+                })
+
+    # 👉 REDIRECCIÓN FINAL (SIEMPRE)
     return redirect(
         f"https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
         f"?status={status}&order={buy_order}"
     )
-
+    
 # -----------------------------------------------------------------------------
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
