@@ -143,7 +143,8 @@ def create_transaction():
 # -----------------------------------------------------------------------------
 # Commit Webpay (REDIRECCIÓN)
 # -----------------------------------------------------------------------------
-@app.route("/commit", methods=["POST", "GET"])
+
+@app.route("/commit", methods=["GET", "POST"])
 def commit():
     token = request.values.get("token_ws")
     if not token:
@@ -159,7 +160,7 @@ def commit():
     status = resp.get("status")
 
     with engine.begin() as conn:
-        # actualizar estado
+        # actualizar estado de la transacción
         conn.execute(text("""
             UPDATE transacciones
             SET tb_status = :st, updated_at = NOW()
@@ -167,7 +168,7 @@ def commit():
         """), {"st": status, "bo": buy_order})
 
         if status == "AUTHORIZED":
-            # pago exitoso
+            # ✅ pago exitoso
             conn.execute(text("""
                 INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
                 SELECT producto_id, 0, 'pago', :ref
@@ -176,37 +177,36 @@ def commit():
             """), {"bo": buy_order, "ref": buy_order})
 
         else:
-        # 🔥 DEVOLVER STOCK SOLO SI HUBO RESERVA
-        reservas = conn.execute(text("""
-            SELECT producto_id, SUM(-cambio) AS cantidad
-            FROM audit_stock
-            WHERE referencia = :ref
-              AND motivo = 'reserva'
-            GROUP BY producto_id
-        """), {"ref": buy_order}).all()
+            # ❌ pago rechazado → devolver stock
+            reservas = conn.execute(text("""
+                SELECT producto_id, SUM(-cambio) AS cantidad
+                FROM audit_stock
+                WHERE referencia = :ref
+                  AND motivo = 'reserva'
+                GROUP BY producto_id
+            """), {"ref": buy_order}).all()
 
-        for pid, qty in reservas:
-            conn.execute(text("""
-                UPDATE productos
-                SET stock = stock + :q
-                WHERE id = :pid
-            """), {"q": qty, "pid": pid})
+            for pid, qty in reservas:
+                conn.execute(text("""
+                    UPDATE productos
+                    SET stock = stock + :q
+                    WHERE id = :pid
+                """), {"q": qty, "pid": pid})
 
-            conn.execute(text("""
-                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                VALUES (:pid, :chg, 'reversa', :ref)
-            """), {
-                "pid": pid,
-                "chg": qty,
-                "ref": buy_order
-              })
+                conn.execute(text("""
+                    INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
+                    VALUES (:pid, :chg, 'reversa', :ref)
+                """), {
+                    "pid": pid,
+                    "chg": qty,
+                    "ref": buy_order
+                })
 
-    # 👉 REDIRECCIÓN FINAL (SIEMPRE)
     return redirect(
         f"https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
         f"?status={status}&order={buy_order}"
     )
-    
+
 # -----------------------------------------------------------------------------
 
 
