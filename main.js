@@ -225,6 +225,28 @@ async function quitarDelCarrito(id) {
   renderCarrito();
 }
 
+async function vaciarCarrito() {
+  if (carrito.size === 0) return;
+
+  const items = [];
+  carrito.forEach(({ producto, cantidad }) => {
+    items.push({ id: producto.id, cantidad });
+  });
+
+  // devolver todo el stock reservado
+  await fetch(`${API_URL}/devolver-carrito`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items })
+  });
+
+  carrito.clear();
+  persistirCarrito();
+  await cargarProductos();
+  renderCarrito();
+}
+
+
 /* =========================================================
    PAGO
 ========================================================= */
@@ -294,4 +316,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   localStorage.setItem("carrito", "[]");
   renderCarrito();
   await cargarProductos();
+
+  const btnVaciar = document.getElementById("btn-vaciar");
+  if (btnVaciar) {
+    btnVaciar.addEventListener("click", vaciarCarrito);
+  }
 });
+
