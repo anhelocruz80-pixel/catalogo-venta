@@ -74,7 +74,7 @@ def agregar_carrito():
 
         conn.execute(text("""
             INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-            VALUES (:pid, :chg, 'reserva', 'carrito')
+            VALUES (:pid, :chg, 'reserva', 'pendiente')
         """), {"pid": pid, "chg": -qty})
 
     return jsonify({"ok": True})
@@ -116,11 +116,21 @@ def create_transaction():
     resp = tx.create(buy_order, session_id, total, return_url)
 
     with engine.begin() as conn:
+        # 1️⃣ guardar transacción
         conn.execute(text("""
             INSERT INTO transacciones (buy_order, tb_token, tb_status, monto_total)
             VALUES (:bo, :tok, 'PENDING', :m)
         """), {"bo": buy_order, "tok": resp["token"], "m": total})
 
+        # 🔗 2️⃣ ASOCIAR RESERVAS "pendiente" A ESTA ORDEN
+        conn.execute(text("""
+            UPDATE audit_stock
+            SET referencia = :bo
+            WHERE referencia = 'pendiente'
+              AND motivo = 'reserva'
+        """), {"bo": buy_order})
+
+        # 3️⃣ guardar items
         for it in items:
             conn.execute(text("""
                 INSERT INTO transaccion_items (buy_order, producto_id, cantidad, precio_unitario)
@@ -166,28 +176,30 @@ def commit():
             """), {"bo": buy_order, "ref": buy_order})
 
         else:
-            # 🔥 PAGO RECHAZADO → DEVOLVER STOCK
-            items = conn.execute(text("""
-                SELECT producto_id, cantidad
-                FROM transaccion_items
-                WHERE buy_order = :bo
-            """), {"bo": buy_order}).all()
+        # 🔥 DEVOLVER STOCK SOLO SI HUBO RESERVA
+        reservas = conn.execute(text("""
+            SELECT producto_id, SUM(-cambio) AS cantidad
+            FROM audit_stock
+            WHERE referencia = :ref
+              AND motivo = 'reserva'
+            GROUP BY producto_id
+        """), {"ref": buy_order}).all()
 
-            for pid, qty in items:
-                conn.execute(text("""
-                    UPDATE productos
-                    SET stock = stock + :q
-                    WHERE id = :pid
-                """), {"q": qty, "pid": pid})
+        for pid, qty in reservas:
+            conn.execute(text("""
+                UPDATE productos
+                SET stock = stock + :q
+                WHERE id = :pid
+            """), {"q": qty, "pid": pid})
 
-                conn.execute(text("""
-                    INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                    VALUES (:pid, :chg, 'reversa', :ref)
-                """), {
-                    "pid": pid,
-                    "chg": qty,
-                    "ref": buy_order
-                })
+            conn.execute(text("""
+                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
+                VALUES (:pid, :chg, 'reversa', :ref)
+            """), {
+                "pid": pid,
+                "chg": qty,
+                "ref": buy_order
+              })
 
     # 👉 REDIRECCIÓN FINAL (SIEMPRE)
     return redirect(

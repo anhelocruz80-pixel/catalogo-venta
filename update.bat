@@ -3,7 +3,7 @@ REM Script para actualizar el repo en GitHub Pages
 REM Uso: update.bat "mensaje de commit"
 
 SET MSG=%1
-IF "%MSG%"=="" SET MSG=Actualizacion version profesional v3
+IF "%MSG%"=="" SET MSG=Actualizacion version profesional v4
 
 echo 📦 Agregando cambios...
 git add .
