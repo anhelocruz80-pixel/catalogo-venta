@@ -312,9 +312,21 @@ function ordenarPorPrecio(v) {
    INIT
 ========================================================= */
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔥 LIBERAR RESERVAS SI SE REFRESCÓ LA PÁGINA
+  try {
+    await fetch(`${API_URL}/liberar-reservas`, {
+      method: "POST"
+    });
+  } catch (e) {
+    console.warn("No se pudieron liberar reservas pendientes");
+  }
+
+  // limpiar estado frontend
   carrito.clear();
   localStorage.setItem("carrito", "[]");
   renderCarrito();
+
+  // cargar productos ya con stock correcto
   await cargarProductos();
 
   const btnVaciar = document.getElementById("btn-vaciar");
@@ -322,4 +334,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     btnVaciar.addEventListener("click", vaciarCarrito);
   }
 });
+
 
