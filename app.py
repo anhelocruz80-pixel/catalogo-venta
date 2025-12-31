@@ -11,6 +11,7 @@ from transbank.common.options import WebpayOptions
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
 from transbank.common.integration_api_keys import IntegrationApiKeys
 from transbank.common.integration_type import IntegrationType
+from datetime import datetime, timedelta
 
 # -----------------------------------------------------------------------------
 # Configuración Flask
@@ -83,8 +84,6 @@ def agregar_carrito():
 # Liberar Reservas Vencidas (CORRECTO)
 # -----------------------------------------------------------------------------  
 
-from datetime import datetime, timedelta
-
 @app.route("/liberar-reservas-vencidas", methods=["POST"])
 def liberar_reservas_vencidas():
     LIMITE_MINUTOS = 10
@@ -115,10 +114,22 @@ def liberar_reservas_vencidas():
 
             conn.execute(text("""
                 INSERT INTO audit_stock
-                    (producto_id, cambio, motivo, referencia)
+                    (producto_id, cambio, motivo, referencia, actor)
                 VALUES
-                    (:pid, :chg, 'reversa', :ref)
+                    (:pid, :chg, 'timeout', :ref, 'cron')
             """), {"pid": pid, "chg": qty, "ref": ref})
+            
+            # 3️⃣ Cerrar reservas vencidas
+            conn.execute(text("""
+                 UPDATE audit_stock
+                 SET referencia = 'cerrada'
+                 WHERE motivo = 'reserva'
+                 AND created_at < :limite
+                 AND referencia NOT IN (
+                 SELECT buy_order
+                 FROM transacciones
+                 WHERE tb_status = 'AUTHORIZED')
+            """), {"limite": limite})
 
     return {"status": "ok", "liberadas": len(reservas)}
 
