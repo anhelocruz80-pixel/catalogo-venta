@@ -83,21 +83,30 @@ def agregar_carrito():
 # Liberar Reservas Vencidas (CORRECTO)
 # -----------------------------------------------------------------------------  
 
+from datetime import datetime, timedelta
+
 @app.route("/liberar-reservas-vencidas", methods=["POST"])
 def liberar_reservas_vencidas():
-    TIMEOUT_MIN = 10
+    LIMITE_MINUTOS = 10
+    limite = datetime.utcnow() - timedelta(minutes=LIMITE_MINUTOS)
 
     with engine.begin() as conn:
+        # 1️⃣ Buscar reservas vencidas
         reservas = conn.execute(text("""
-            SELECT referencia, producto_id, SUM(-cambio) AS cantidad
+            SELECT producto_id, referencia, SUM(-cambio) AS cantidad
             FROM audit_stock
             WHERE motivo = 'reserva'
-              AND referencia LIKE 'orden-%'
-              AND created_at < now() - (:mins || ' minutes')::interval
-            GROUP BY referencia, producto_id
-        """), {"mins": TIMEOUT_MIN}).all()
+              AND created_at < :limite
+              AND referencia NOT IN (
+                  SELECT buy_order
+                  FROM transacciones
+                  WHERE tb_status = 'AUTHORIZED'
+              )
+            GROUP BY producto_id, referencia
+        """), {"limite": limite}).all()
 
-        for ref, pid, qty in reservas:
+        # 2️⃣ Devolver stock
+        for pid, ref, qty in reservas:
             conn.execute(text("""
                 UPDATE productos
                 SET stock = stock + :q
@@ -108,17 +117,10 @@ def liberar_reservas_vencidas():
                 INSERT INTO audit_stock
                     (producto_id, cambio, motivo, referencia)
                 VALUES
-                    (:pid, :chg, 'timeout', :ref)
+                    (:pid, :chg, 'reversa', :ref)
             """), {"pid": pid, "chg": qty, "ref": ref})
 
-        conn.execute(text("""
-            UPDATE audit_stock
-            SET referencia = 'cerrada'
-            WHERE motivo = 'reserva'
-              AND created_at < now() - (:mins || ' minutes')::interval
-        """), {"mins": TIMEOUT_MIN})
-
-    return jsonify({"ok": True})
+    return {"status": "ok", "liberadas": len(reservas)}
 
 # -----------------------------------------------------------------------------
 # Devolver stock
