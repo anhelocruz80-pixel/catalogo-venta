@@ -240,26 +240,43 @@ def commit():
         """), {"st": status, "bo": buy_order})
 
         if status != "AUTHORIZED":
-            # 3️⃣ DEVOLVER STOCK (RECHAZO)
-            reservas = conn.execute(text("""
-                SELECT producto_id, SUM(-cambio) AS cantidad
-                FROM audit_stock
-                WHERE referencia = :bo
+
+           # 🔍 Ver si aún existen reservas activas
+           reservas = conn.execute(text("""
+               SELECT producto_id, SUM(-cambio) AS cantidad
+               FROM audit_stock
+               WHERE referencia = :bo
+               AND motivo = 'reserva'
+               GROUP BY producto_id
+           """), {"bo": buy_order}).all()
+
+           # ❗ Si no hay reservas, NO hacer nada (ya se liberó antes)
+           if reservas:
+              for pid, qty in reservas:
+                  conn.execute(text("""
+                      UPDATE productos
+                      SET stock = stock + :q
+                      WHERE id = :pid
+                  """), {"q": qty, "pid": pid})
+
+                  conn.execute(text("""
+                      INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
+                      VALUES (:pid, :chg, 'reversa', :ref)
+                  """), {
+                      "pid": pid,
+                      "chg": qty,
+                      "ref": buy_order
+                 })
+
+            # 🔒 Marcar la reserva como cerrada
+            conn.execute(text("""
+                UPDATE audit_stock
+                SET motivo = 'reversa'
+                WHERE producto_id = :pid
+                  AND referencia = :ref
                   AND motivo = 'reserva'
-                GROUP BY producto_id
-            """), {"bo": buy_order}).all()
+            """), {"pid": pid, "ref": buy_order})
 
-            for pid, qty in reservas:
-                conn.execute(text("""
-                    UPDATE productos
-                    SET stock = stock + :q
-                    WHERE id = :pid
-                """), {"q": qty, "pid": pid})
-
-                conn.execute(text("""
-                    INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                    VALUES (:pid, :chg, 'reversa', :ref)
-                """), {"pid": pid, "chg": qty, "ref": buy_order})
 
     # 4️⃣ REDIRIGIR AL FRONTEND
     return redirect(
