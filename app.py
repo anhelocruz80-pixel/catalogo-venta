@@ -82,38 +82,43 @@ def agregar_carrito():
 # -----------------------------------------------------------------------------
 # Liberar Reservas Pendientes (CORRECTO)
 # -----------------------------------------------------------------------------
+
 @app.route("/liberar-reservas", methods=["POST"])
 def liberar_reservas():
-    items = request.json.get("items", [])
-
     with engine.begin() as conn:
-        for it in items:
-            pid = it["id"]
-            qty = it["cantidad"]
+        # 1️⃣ buscar TODAS las reservas pendientes
+        reservas = conn.execute(text("""
+            SELECT producto_id, SUM(-cambio) AS cantidad
+            FROM audit_stock
+            WHERE motivo = 'reserva'
+              AND referencia = 'pendiente'
+            GROUP BY producto_id
+        """)).all()
 
-            # 1️⃣ devolver stock
+        # 2️⃣ devolver stock exactamente reservado
+        for pid, qty in reservas:
             conn.execute(text("""
                 UPDATE productos
                 SET stock = stock + :q
                 WHERE id = :pid
             """), {"q": qty, "pid": pid})
 
-            # 2️⃣ ELIMINAR la reserva pendiente (clave del fix)
-            conn.execute(text("""
-                DELETE FROM audit_stock
-                WHERE producto_id = :pid
-                  AND motivo = 'reserva'
-                  AND referencia = 'pendiente'
-                LIMIT 1
-            """), {"pid": pid})
-
-            # 3️⃣ auditoría limpia (opcional pero correcto)
+            # 3️⃣ auditar liberación
             conn.execute(text("""
                 INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
                 VALUES (:pid, :chg, 'liberacion', 'abandono')
             """), {"pid": pid, "chg": qty})
 
+        # 4️⃣ marcar reservas como cerradas
+        conn.execute(text("""
+            UPDATE audit_stock
+            SET referencia = 'cerrada'
+            WHERE motivo = 'reserva'
+              AND referencia = 'pendiente'
+        """))
+
     return jsonify({"ok": True})
+
 
 # -----------------------------------------------------------------------------
 # Devolver stock
