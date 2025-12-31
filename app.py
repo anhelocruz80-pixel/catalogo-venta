@@ -116,8 +116,8 @@ def liberar_reservas_vencidas():
                 INSERT INTO audit_stock
                     (producto_id, cambio, motivo, referencia, actor)
                 VALUES
-                    (:pid, :chg, 'timeout', :ref, 'cron')
-            """), {"pid": pid, "chg": qty, "ref": ref})
+                    (:pid, :chg, 'timeout', 'timeout', 'cron')
+            """), {"pid": pid, "chg": qty})
             
             # 3️⃣ Cerrar reservas vencidas
             conn.execute(text("""
