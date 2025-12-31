@@ -4,14 +4,25 @@ const order = params.get("order");
 
 const cont = document.getElementById("resultado-pago");
 
-if (status === "AUTHORIZED") {
+// 🛡️ Caso: acceso directo o sin parámetros
+if (!status) {
+  cont.innerHTML = `
+    <div class="card">
+      <h2>ℹ️ Sin información de pago</h2>
+      <p>No hay una transacción asociada.</p>
+      <a href="index.html">Ir a la tienda</a>
+    </div>
+  `;
+
+} else if (status === "AUTHORIZED") {
   cont.innerHTML = `
     <div class="card">
       <h2>✅ Pago exitoso</h2>
-      <p>Orden: ${order}</p>
+      ${order ? `<p>Orden: ${order}</p>` : ""}
       <a href="index.html">Volver a la tienda</a>
     </div>
   `;
+
 } else if (status === "ABORTED") {
   cont.innerHTML = `
     <div class="card">
@@ -20,6 +31,7 @@ if (status === "AUTHORIZED") {
       <a href="index.html">Volver a la tienda</a>
     </div>
   `;
+
 } else {
   cont.innerHTML = `
     <div class="card">
