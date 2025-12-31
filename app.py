@@ -213,15 +213,15 @@ def create_transaction():
 @app.route("/commit", methods=["GET", "POST"])
 def commit():
     token = request.values.get("token_ws")
-    
+
     # 🔹 Usuario canceló o volvió sin token
     if not token:
         return redirect(
-        "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
-        "?status=ABORTED"
-    )
+            "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
+            "?status=ABORTED"
+        )
 
-    # 1️⃣ CONFIRMAR CON WEBPAY
+    # 1️⃣ Confirmar con Webpay
     try:
         resp = tx.commit(token)
     except Exception as e:
@@ -232,53 +232,50 @@ def commit():
     status = resp["status"]
 
     with engine.begin() as conn:
-        # 2️⃣ ACTUALIZAR TRANSACCIÓN
-        conn.execute(text("""
-            UPDATE transacciones
-            SET tb_status = :st
-            WHERE buy_order = :bo
-        """), {"st": status, "bo": buy_order})
+        # 2️⃣ Actualizar transacción
+        conn.execute(
+            text("""
+                UPDATE transacciones
+                SET tb_status = :st
+                WHERE buy_order = :bo
+            """),
+            {"st": status, "bo": buy_order}
+        )
 
+        # 3️⃣ Si NO fue autorizado → devolver stock
         if status != "AUTHORIZED":
+            reservas = conn.execute(
+                text("""
+                    SELECT producto_id, SUM(-cambio) AS cantidad
+                    FROM audit_stock
+                    WHERE referencia = :bo
+                      AND motivo = 'reserva'
+                    GROUP BY producto_id
+                """),
+                {"bo": buy_order}
+            ).all()
 
-           # 🔍 Ver si aún existen reservas activas
-           reservas = conn.execute(text("""
-               SELECT producto_id, SUM(-cambio) AS cantidad
-               FROM audit_stock
-               WHERE referencia = :bo
-               AND motivo = 'reserva'
-               GROUP BY producto_id
-           """), {"bo": buy_order}).all()
+            for pid, qty in reservas:
+                conn.execute(
+                    text("""
+                        UPDATE productos
+                        SET stock = stock + :q
+                        WHERE id = :pid
+                    """),
+                    {"q": qty, "pid": pid}
+                )
 
-           # ❗ Si no hay reservas, NO hacer nada (ya se liberó antes)
-           if reservas:
-              for pid, qty in reservas:
-                  conn.execute(text("""
-                      UPDATE productos
-                      SET stock = stock + :q
-                      WHERE id = :pid
-                  """), {"q": qty, "pid": pid})
+                conn.execute(
+                    text("""
+                        INSERT INTO audit_stock
+                            (producto_id, cambio, motivo, referencia)
+                        VALUES
+                            (:pid, :chg, 'reversa', :ref)
+                    """),
+                    {"pid": pid, "chg": qty, "ref": buy_order}
+                )
 
-                  conn.execute(text("""
-                      INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                      VALUES (:pid, :chg, 'reversa', :ref)
-                  """), {
-                      "pid": pid,
-                      "chg": qty,
-                      "ref": buy_order
-                 })
-
-            # 🔒 Marcar la reserva como cerrada
-            conn.execute(text("""
-                UPDATE audit_stock
-                SET motivo = 'reversa'
-                WHERE producto_id = :pid
-                  AND referencia = :ref
-                  AND motivo = 'reserva'
-            """), {"pid": pid, "ref": buy_order})
-
-
-    # 4️⃣ REDIRIGIR AL FRONTEND
+    # 4️⃣ Redirigir SIEMPRE al frontend
     return redirect(
         f"https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
         f"?status={status}&order={buy_order}"
