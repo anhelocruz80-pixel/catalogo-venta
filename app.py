@@ -216,34 +216,34 @@ def commit():
 
     # 🔹 Usuario canceló o volvió sin token
     if not token:
-    # liberar TODAS las reservas pendientes
-    with engine.begin() as conn:
-        reservas = conn.execute(text("""
-            SELECT producto_id, SUM(-cambio) AS cantidad
-            FROM audit_stock
-            WHERE motivo = 'reserva'
-              AND referencia LIKE 'orden-%'
-            GROUP BY producto_id
-        """)).all()
+        # liberar TODAS las reservas pendientes
+        with engine.begin() as conn:
+            reservas = conn.execute(text("""
+                SELECT producto_id, SUM(-cambio) AS cantidad
+                FROM audit_stock
+                WHERE motivo = 'reserva'
+                  AND referencia LIKE 'orden-%'
+                GROUP BY producto_id
+            """)).all()
 
-        for pid, qty in reservas:
-            conn.execute(text("""
-                UPDATE productos
-                SET stock = stock + :q
-                WHERE id = :pid
-            """), {"q": qty, "pid": pid})
+            for pid, qty in reservas:
+                conn.execute(text("""
+                    UPDATE productos
+                    SET stock = stock + :q
+                    WHERE id = :pid
+                """), {"q": qty, "pid": pid})
 
-            conn.execute(text("""
-                INSERT INTO audit_stock
-                    (producto_id, cambio, motivo, referencia)
-                VALUES
-                    (:pid, :chg, 'reversa', 'ABORTED')
-            """), {"pid": pid, "chg": qty})
+                conn.execute(text("""
+                    INSERT INTO audit_stock
+                        (producto_id, cambio, motivo, referencia)
+                    VALUES
+                        (:pid, :chg, 'reversa', 'ABORTED')
+                """), {"pid": pid, "chg": qty})
 
-    return redirect(
-        "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
-        "?status=ABORTED"
-    )
+        return redirect(
+            "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
+            "?status=ABORTED"
+        )
 
     # 1️⃣ Confirmar con Webpay
     try:
@@ -306,7 +306,6 @@ def commit():
     )
 
 # -----------------------------------------------------------------------------
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
