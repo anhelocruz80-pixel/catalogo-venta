@@ -80,9 +80,8 @@ def agregar_carrito():
     return jsonify({"ok": True})
     
 # -----------------------------------------------------------------------------
-# Liberar Reservas Pendientes
-# ----------------------------------------------------------------------------- 
-    
+# Liberar Reservas Pendientes (CORRECTO)
+# -----------------------------------------------------------------------------
 @app.route("/liberar-reservas", methods=["POST"])
 def liberar_reservas():
     items = request.json.get("items", [])
@@ -92,21 +91,29 @@ def liberar_reservas():
             pid = it["id"]
             qty = it["cantidad"]
 
-            # devolver stock
+            # 1️⃣ devolver stock
             conn.execute(text("""
                 UPDATE productos
                 SET stock = stock + :q
                 WHERE id = :pid
             """), {"q": qty, "pid": pid})
 
-            # marcar auditoría
+            # 2️⃣ ELIMINAR la reserva pendiente (clave del fix)
+            conn.execute(text("""
+                DELETE FROM audit_stock
+                WHERE producto_id = :pid
+                  AND motivo = 'reserva'
+                  AND referencia = 'pendiente'
+                LIMIT 1
+            """), {"pid": pid})
+
+            # 3️⃣ auditoría limpia (opcional pero correcto)
             conn.execute(text("""
                 INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
                 VALUES (:pid, :chg, 'liberacion', 'abandono')
             """), {"pid": pid, "chg": qty})
 
     return jsonify({"ok": True})
-
 
 # -----------------------------------------------------------------------------
 # Devolver stock
