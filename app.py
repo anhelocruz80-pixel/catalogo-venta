@@ -213,8 +213,13 @@ def create_transaction():
 @app.route("/commit", methods=["GET", "POST"])
 def commit():
     token = request.values.get("token_ws")
+    
+    # 🔹 Usuario canceló o volvió sin token
     if not token:
-        return "Token faltante", 400
+        return redirect(
+        "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
+        "?status=ABORTED"
+    )
 
     # 1️⃣ CONFIRMAR CON WEBPAY
     try:
