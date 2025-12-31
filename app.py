@@ -78,47 +78,47 @@ def agregar_carrito():
         """), {"pid": pid, "chg": -qty})
 
     return jsonify({"ok": True})
-    
+        
 # -----------------------------------------------------------------------------
-# Liberar Reservas Pendientes (CORRECTO)
-# -----------------------------------------------------------------------------
+# Liberar Reservas Vencidas (CORRECTO)
+# -----------------------------------------------------------------------------  
 
-@app.route("/liberar-reservas", methods=["POST"])
-def liberar_reservas():
+@app.route("/liberar-reservas-vencidas", methods=["POST"])
+def liberar_reservas_vencidas():
+    TIMEOUT_MIN = 10
+
     with engine.begin() as conn:
-        # 1️⃣ buscar TODAS las reservas pendientes
         reservas = conn.execute(text("""
-            SELECT producto_id, SUM(-cambio) AS cantidad
+            SELECT referencia, producto_id, SUM(-cambio) AS cantidad
             FROM audit_stock
             WHERE motivo = 'reserva'
-              AND referencia = 'pendiente'
-            GROUP BY producto_id
-        """)).all()
+              AND referencia LIKE 'orden-%'
+              AND created_at < now() - (:mins || ' minutes')::interval
+            GROUP BY referencia, producto_id
+        """), {"mins": TIMEOUT_MIN}).all()
 
-        # 2️⃣ devolver stock exactamente reservado
-        for pid, qty in reservas:
+        for ref, pid, qty in reservas:
             conn.execute(text("""
                 UPDATE productos
                 SET stock = stock + :q
                 WHERE id = :pid
             """), {"q": qty, "pid": pid})
 
-            # 3️⃣ auditar liberación
             conn.execute(text("""
-                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                VALUES (:pid, :chg, 'liberacion', 'abandono')
-            """), {"pid": pid, "chg": qty})
+                INSERT INTO audit_stock
+                    (producto_id, cambio, motivo, referencia)
+                VALUES
+                    (:pid, :chg, 'timeout', :ref)
+            """), {"pid": pid, "chg": qty, "ref": ref})
 
-        # 4️⃣ marcar reservas como cerradas
         conn.execute(text("""
             UPDATE audit_stock
             SET referencia = 'cerrada'
             WHERE motivo = 'reserva'
-              AND referencia = 'pendiente'
-        """))
+              AND created_at < now() - (:mins || ' minutes')::interval
+        """), {"mins": TIMEOUT_MIN})
 
     return jsonify({"ok": True})
-
 
 # -----------------------------------------------------------------------------
 # Devolver stock
@@ -148,8 +148,7 @@ def devolver_carrito():
                 WHERE producto_id = :pid
                   AND motivo = 'reserva'
                   AND referencia = 'pendiente'
-                LIMIT :q
-            """), {"pid": pid, "q": qty})
+            """), {"pid": pid})
 
             # 3️⃣ registrar evento explícito
             conn.execute(text("""
@@ -215,31 +214,8 @@ def commit():
     token = request.values.get("token_ws")
 
     # 🔹 Usuario canceló o volvió sin token
+    # ❗ NO se toca stock aquí
     if not token:
-        # liberar TODAS las reservas pendientes
-        with engine.begin() as conn:
-            reservas = conn.execute(text("""
-                SELECT producto_id, SUM(-cambio) AS cantidad
-                FROM audit_stock
-                WHERE motivo = 'reserva'
-                  AND referencia LIKE 'orden-%'
-                GROUP BY producto_id
-            """)).all()
-
-            for pid, qty in reservas:
-                conn.execute(text("""
-                    UPDATE productos
-                    SET stock = stock + :q
-                    WHERE id = :pid
-                """), {"q": qty, "pid": pid})
-
-                conn.execute(text("""
-                    INSERT INTO audit_stock
-                        (producto_id, cambio, motivo, referencia)
-                    VALUES
-                        (:pid, :chg, 'reversa', 'ABORTED')
-                """), {"pid": pid, "chg": qty})
-
         return redirect(
             "https://anhelocruz80-pixel.github.io/catalogo-venta/commit.html"
             "?status=ABORTED"
@@ -266,7 +242,7 @@ def commit():
             {"st": status, "bo": buy_order}
         )
 
-        # 3️⃣ Si NO fue autorizado → devolver stock
+        # 3️⃣ Si NO fue autorizado → devolver stock SOLO de esta orden
         if status != "AUTHORIZED":
             reservas = conn.execute(
                 text("""
@@ -280,6 +256,7 @@ def commit():
             ).all()
 
             for pid, qty in reservas:
+                # devolver stock
                 conn.execute(
                     text("""
                         UPDATE productos
@@ -289,6 +266,7 @@ def commit():
                     {"q": qty, "pid": pid}
                 )
 
+                # auditar reversa
                 conn.execute(
                     text("""
                         INSERT INTO audit_stock
