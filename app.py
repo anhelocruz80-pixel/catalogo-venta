@@ -11,7 +11,6 @@ from transbank.common.options import WebpayOptions
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
 from transbank.common.integration_api_keys import IntegrationApiKeys
 from transbank.common.integration_type import IntegrationType
-from datetime import datetime, timedelta
 
 # -----------------------------------------------------------------------------
 # Configuración Flask
@@ -84,52 +83,48 @@ def agregar_carrito():
 # Liberar Reservas Vencidas (CORRECTO)
 # -----------------------------------------------------------------------------  
 
+from datetime import datetime, timedelta
+
 @app.route("/liberar-reservas-vencidas", methods=["POST"])
 def liberar_reservas_vencidas():
     LIMITE_MINUTOS = 10
     limite = datetime.utcnow() - timedelta(minutes=LIMITE_MINUTOS)
 
     with engine.begin() as conn:
-        # 1️⃣ Buscar reservas vencidas
+        # 1️⃣ Buscar reservas vencidas NO procesadas
         reservas = conn.execute(text("""
             SELECT producto_id, referencia, SUM(-cambio) AS cantidad
             FROM audit_stock
             WHERE motivo = 'reserva'
+              AND referencia = 'pendiente'
               AND created_at < :limite
-              AND referencia NOT IN (
-                  SELECT buy_order
-                  FROM transacciones
-                  WHERE tb_status = 'AUTHORIZED'
-              )
             GROUP BY producto_id, referencia
         """), {"limite": limite}).all()
 
-        # 2️⃣ Devolver stock
         for pid, ref, qty in reservas:
+            # 2️⃣ devolver stock
             conn.execute(text("""
                 UPDATE productos
                 SET stock = stock + :q
                 WHERE id = :pid
             """), {"q": qty, "pid": pid})
 
+            # 3️⃣ auditar timeout
             conn.execute(text("""
                 INSERT INTO audit_stock
                     (producto_id, cambio, motivo, referencia, actor)
                 VALUES
                     (:pid, :chg, 'timeout', 'timeout', 'cron')
             """), {"pid": pid, "chg": qty})
-            
-            # 3️⃣ Cerrar reservas vencidas
+
+            # 4️⃣ CERRAR reserva para que NO vuelva a procesarse
             conn.execute(text("""
-                 UPDATE audit_stock
-                 SET referencia = 'cerrada'
-                 WHERE motivo = 'reserva'
-                 AND created_at < :limite
-                 AND referencia NOT IN (
-                 SELECT buy_order
-                 FROM transacciones
-                 WHERE tb_status = 'AUTHORIZED')
-            """), {"limite": limite})
+                UPDATE audit_stock
+                SET referencia = 'cerrada'
+                WHERE motivo = 'reserva'
+                  AND referencia = 'pendiente'
+                  AND producto_id = :pid
+            """), {"pid": pid})
 
     return {"status": "ok", "liberadas": len(reservas)}
 
