@@ -17,7 +17,12 @@ from flask import session
 # Configuración Flask
 # -----------------------------------------------------------------------------
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
+CORS(
+    app,
+    supports_credentials=True,
+    resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}}
+)
+
 
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 

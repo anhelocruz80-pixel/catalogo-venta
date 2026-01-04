@@ -157,6 +157,7 @@ async function agregarAlCarrito(id) {
   try {
     const res = await fetch(`${API_URL}/agregar-carrito`, {
       method: "POST",
+	  credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, cantidad: 1 })
     });
@@ -215,6 +216,7 @@ async function quitarDelCarrito(id) {
 
   await fetch(`${API_URL}/devolver-carrito`, {
     method: "POST",
+	credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       items: [{ id, cantidad: item.cantidad }]
@@ -264,6 +266,7 @@ async function pagarCarrito() {
 
   const res = await fetch(`${API_URL}/create-transaction`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ items })
   });
