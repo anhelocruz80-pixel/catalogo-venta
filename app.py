@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import datetime
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, session
 from flask_cors import CORS
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
@@ -11,12 +11,25 @@ from transbank.common.options import WebpayOptions
 from transbank.common.integration_commerce_codes import IntegrationCommerceCodes
 from transbank.common.integration_api_keys import IntegrationApiKeys
 from transbank.common.integration_type import IntegrationType
+from flask import session
+
+# -----------------------------------------------------------------------------
+# session_id
+# -----------------------------------------------------------------------------
+
+@app.before_request
+def ensure_session_id():
+    if "session_id" not in session:
+        session["session_id"] = str(uuid.uuid4())
+
 
 # -----------------------------------------------------------------------------
 # Configuración Flask
 # -----------------------------------------------------------------------------
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
+
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
 # -----------------------------------------------------------------------------
 # PostgreSQL (Railway)
@@ -73,9 +86,9 @@ def agregar_carrito():
         )
 
         conn.execute(text("""
-            INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-            VALUES (:pid, :chg, 'reserva', 'pendiente')
-        """), {"pid": pid, "chg": -qty})
+            INSERT INTO audit_stock (producto_id, cambio, motivo, referencia, session_id)
+            VALUES (:pid, :chg, 'reserva', 'pendiente', :sid)
+        """), {"pid": pid, "chg": -qty, "sid": session["session_id"]})
 
     return jsonify({"ok": True})
         
@@ -156,7 +169,9 @@ def devolver_carrito():
                 WHERE producto_id = :pid
                   AND motivo = 'reserva'
                   AND referencia = 'pendiente'
-            """), {"pid": pid})
+                  AND session_id = :sid
+            """), {"pid": pid, "sid": session["session_id"]
+})
 
             # 3️⃣ registrar evento explícito
             conn.execute(text("""
