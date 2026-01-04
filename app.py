@@ -169,14 +169,13 @@ def devolver_carrito():
                   AND motivo = 'reserva'
                   AND referencia = 'pendiente'
                   AND session_id = :sid
-            """), {"pid": pid, "sid": session["session_id"]
-})
+            """), {"pid": pid, "sid": session["session_id"]})
 
             # 3️⃣ registrar evento explícito
             conn.execute(text("""
-                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia)
-                VALUES (:pid, :chg, 'liberacion', 'carrito')
-            """), {"pid": pid, "chg": qty})
+                INSERT INTO audit_stock (producto_id, cambio, motivo, referencia, actor, session_id)
+                VALUES (:pid, :chg, 'liberacion', 'carrito', 'api', :sid)
+            """), {"pid": pid, "chg": qty, "sid": session["session_id"]})
 
     return jsonify({"ok": True})
 
