@@ -14,6 +14,14 @@ from transbank.common.integration_type import IntegrationType
 from flask import session
 
 # -----------------------------------------------------------------------------
+# Configuración Flask
+# -----------------------------------------------------------------------------
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
+
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
+
+# -----------------------------------------------------------------------------
 # session_id
 # -----------------------------------------------------------------------------
 
@@ -21,15 +29,6 @@ from flask import session
 def ensure_session_id():
     if "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
-
-
-# -----------------------------------------------------------------------------
-# Configuración Flask
-# -----------------------------------------------------------------------------
-app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://anhelocruz80-pixel.github.io"]}})
-
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
 # -----------------------------------------------------------------------------
 # PostgreSQL (Railway)
