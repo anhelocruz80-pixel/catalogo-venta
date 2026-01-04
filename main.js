@@ -213,7 +213,7 @@ async function quitarDelCarrito(id) {
   const item = carrito.get(id);
   if (!item) return;
 
-  await fetch(`${API_URL}/liberar-reservas`, {
+  await fetch(`${API_URL}/devolver-carrito`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -235,7 +235,7 @@ async function vaciarCarrito() {
     items.push({ id: producto.id, cantidad });
   });
 
-  await fetch(`${API_URL}/liberar-reservas`, {
+  await fetch(`${API_URL}/devolver-carrito`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ items })
